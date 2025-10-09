@@ -32,7 +32,7 @@ const VerificationHistory = () => {
   // Mock user data
   const mockUser = {
     id: 1,
-    name: "Priya Sharma",
+  name: "RANGESH",
     email: "priya.sharma@email.com",
     phone: "+91 98765 43210"
   };

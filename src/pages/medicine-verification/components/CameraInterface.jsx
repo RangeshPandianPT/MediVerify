@@ -18,24 +18,95 @@ const CameraInterface = ({
   const fileInputRef = useRef(null);
 
   const startCamera = async () => {
+    const tryGetUserMedia = async (constraints) => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('MediaDevices API not supported in this browser');
+      }
+      return navigator.mediaDevices.getUserMedia(constraints);
+    };
+
+    setError(null);
     try {
-      setError(null);
-      const mediaStream = await navigator.mediaDevices?.getUserMedia({
+      // Enumerate devices first so we can pick a specific deviceId if facingMode isn't reliable
+      let preferredDeviceId = null;
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputs = devices.filter(d => d.kind === 'videoinput');
+        // Prefer labels that hint at back/rear camera (useful on mobile)
+        const rear = videoInputs.find(d => /back|rear|environment|wide|rear camera/i.test(d.label));
+        preferredDeviceId = rear?.deviceId || videoInputs[0]?.deviceId || null;
+        if (videoInputs.length === 0) {
+          console.warn('No video input devices found');
+        } else {
+          console.info('Video inputs found:', videoInputs.map(d => ({ id: d.deviceId, label: d.label })));
+        }
+      } catch (enumErr) {
+        console.warn('Could not enumerate devices:', enumErr);
+      }
+      // First, attempt a constrained request preferring the rear camera
+      const preferredConstraints = {
         video: {
-          facingMode: 'environment',
+          facingMode: { ideal: 'environment' },
           width: { ideal: 1920 },
           height: { ideal: 1080 }
+        },
+        audio: false
+      };
+
+  let mediaStream;
+
+      try {
+        // If we found a preferred deviceId, include it as an ideal constraint
+        const req = preferredDeviceId
+          ? { ...preferredConstraints, video: { ...preferredConstraints.video, deviceId: { ideal: preferredDeviceId } } }
+          : preferredConstraints;
+
+        mediaStream = await tryGetUserMedia(req);
+      } catch (innerErr) {
+        // If the camera is busy or constraints can't be satisfied, fall back to a simpler request
+        console.warn('Preferred constraints failed, trying fallback. Error:', innerErr);
+
+        if (innerErr && (innerErr.name === 'NotReadableError' || innerErr.name === 'OverconstrainedError')) {
+          // Try a minimal constraint set
+          try {
+            // Try with deviceId if we have one, otherwise plain video
+            const fallbackReq = preferredDeviceId ? { video: { deviceId: { ideal: preferredDeviceId } }, audio: false } : { video: true, audio: false };
+            mediaStream = await tryGetUserMedia(fallbackReq);
+          } catch (fallbackErr) {
+            throw fallbackErr;
+          }
+        } else {
+          // For other errors (e.g. NotAllowedError) just rethrow to be handled below
+          throw innerErr;
         }
-      });
-      
+      }
+
       setStream(mediaStream);
       if (videoRef?.current) {
-        videoRef.current.srcObject = mediaStream;
+        try {
+          videoRef.current.srcObject = mediaStream;
+          // Some browsers require an explicit play() call
+          await videoRef.current.play();
+        } catch (playErr) {
+          console.warn('Video play() failed (may require user interaction):', playErr);
+        }
       }
+
       setIsCameraActive(true);
     } catch (err) {
-      setError('Camera access denied. Please enable camera permissions.');
+      // Provide a more specific user message depending on the error type
       console.error('Camera error:', err);
+      if (err && err.name === 'NotAllowedError') {
+        setError('Camera permission denied. Please allow camera access in your browser settings.');
+      } else if (err && err.name === 'NotFoundError') {
+        setError('No camera device found. Please connect a camera and try again.');
+      } else if (err && err.name === 'NotReadableError') {
+        setError('Could not start video source. The camera may be in use by another application.');
+      } else if (err && err.name === 'OverconstrainedError') {
+        setError('Camera does not support the requested resolution. Try a different device or reduce constraints.');
+      } else {
+        setError('Unable to access camera. Please check your device settings and try again.');
+      }
     }
   };
 

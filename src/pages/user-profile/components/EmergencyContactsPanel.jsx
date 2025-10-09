@@ -16,7 +16,7 @@ const EmergencyContactsPanel = ({ contacts, onUpdateContacts }) => {
     },
     {
       id: 2,
-      name: "Priya Sharma",
+  name: "RANGESH",
       relationship: "spouse",
       phone: "+91 87654 32109",
       email: "priya.sharma@email.com",

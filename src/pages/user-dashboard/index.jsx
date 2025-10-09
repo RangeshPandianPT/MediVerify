@@ -15,7 +15,7 @@ const UserDashboard = () => {
   useEffect(() => {
     const mockUser = {
       id: 'user_123',
-      name: 'Priya Sharma',
+  name: 'RANGESH',
       email: 'priya.sharma@email.com',
       phone: '+91 98765 43210',
       location: 'Mumbai, Maharashtra',

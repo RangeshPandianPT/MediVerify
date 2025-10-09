@@ -19,7 +19,7 @@ const VerificationResults = () => {
   // Mock user data
   const mockUser = {
     id: 'user_001',
-    name: 'Priya Sharma',
+  name: 'RANGESH',
     email: 'priya.sharma@email.com',
     verificationCount: 23
   };
