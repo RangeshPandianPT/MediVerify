@@ -3,9 +3,11 @@ import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
 import tagger from "@dhiwise/component-tagger";
 
+// https://vitejs.dev/config/
 export default defineConfig({
+  // Using default dist directory for Netlify compatibility
   build: {
-    outDir: "build", // ✔ Vite will output to build/
+    outDir: "dist",
     chunkSizeWarningLimit: 2000,
   },
   plugins: [tsconfigPaths(), react(), tagger()],
