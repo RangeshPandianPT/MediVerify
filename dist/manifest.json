@@ -1,0 +1,58 @@
+{
+  "name": "MediVerify - Medicine Verification App",
+  "short_name": "MediVerify",
+  "description": "Comprehensive medicine verification and database application with offline support",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["medical", "health", "utility"],
+  "icons": [
+    {
+      "src": "favicon.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "favicon.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ],
+  "features": [
+    "camera",
+    "offline-support",
+    "background-sync"
+  ],
+  "shortcuts": [
+    {
+      "name": "Verify Medicine",
+      "short_name": "Verify",
+      "description": "Quickly verify medicine authenticity",
+      "url": "/medicine-verification",
+      "icons": [
+        {
+          "src": "favicon.jpg",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Medicine Database",
+      "short_name": "Database",
+      "description": "Browse medicine information",
+      "url": "/medicine-database",
+      "icons": [
+        {
+          "src": "favicon.jpg",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
+}

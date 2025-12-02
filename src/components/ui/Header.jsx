@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { Menu, X, Database } from 'lucide-react';
 import Icon from '../AppIcon';
 import Button from './Button';
+import DarkModeToggle from './DarkModeToggle';
 
-const Header = ({ user, verificationCount = 0, hasUnreadResults = false }) => {
+const Header = ({ user, verificationCount = 0, hasUnreadResults = false, title }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -20,6 +22,12 @@ const Header = ({ user, verificationCount = 0, hasUnreadResults = false }) => {
       path: '/medicine-verification', 
       icon: 'Shield',
       tooltip: 'Scan medicine for authenticity verification'
+    },
+    { 
+      label: 'Database', 
+      path: '/medicine-database', 
+      icon: Database,
+      tooltip: 'Browse comprehensive medicine database'
     },
     { 
       label: 'History', 
@@ -93,6 +101,9 @@ const Header = ({ user, verificationCount = 0, hasUnreadResults = false }) => {
 
             {/* User Section & Mobile Menu Button */}
             <div className="flex items-center space-x-4">
+              {/* Dark Mode Toggle */}
+              <DarkModeToggle />
+              
               {/* Verification Count Badge */}
               {verificationCount > 0 && (
                 <div className="hidden sm:flex items-center space-x-2 px-3 py-1 bg-muted rounded-full">

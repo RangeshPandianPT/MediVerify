@@ -9,6 +9,7 @@ import VerificationHistory from './pages/verification-history';
 import UserDashboard from './pages/user-dashboard';
 import UserProfile from './pages/user-profile';
 import MedicineVerification from './pages/medicine-verification';
+import MedicineDatabase from './pages/medicine-database';
 
 const Routes = () => {
   return (
@@ -24,6 +25,7 @@ const Routes = () => {
         <Route path="/user-dashboard" element={<UserDashboard />} />
         <Route path="/user-profile" element={<UserProfile />} />
         <Route path="/medicine-verification" element={<MedicineVerification />} />
+        <Route path="/medicine-database" element={<MedicineDatabase />} />
         <Route path="*" element={<NotFound />} />
       </RouterRoutes>
       </ErrorBoundary>
