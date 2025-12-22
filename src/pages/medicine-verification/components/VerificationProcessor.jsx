@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Icon from '../../../components/AppIcon';
 import VerificationStatusIndicator from '../../../components/ui/VerificationStatusIndicator';
+import { verifyMedicine } from '../../../utils/api';
 
 const VerificationProcessor = ({ 
   imageFile, 
@@ -11,102 +12,77 @@ const VerificationProcessor = ({
   const [processingStage, setProcessingStage] = useState('analyzing');
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
 
   const processingStages = [
-    { id: 'analyzing', label: 'Analyzing Image', duration: 2000 },
-    { id: 'extracting', label: 'Extracting Features', duration: 1500 },
-    { id: 'comparing', label: 'Comparing Database', duration: 2500 },
-    { id: 'calculating', label: 'Calculating Confidence', duration: 1000 },
-    { id: 'complete', label: 'Verification Complete', duration: 500 }
+    { id: 'analyzing', label: 'Analyzing Image', duration: 800 },
+    { id: 'extracting', label: 'Extracting Features', duration: 600 },
+    { id: 'comparing', label: 'AI Model Processing', duration: 1000 },
+    { id: 'calculating', label: 'Calculating Confidence', duration: 400 },
+    { id: 'complete', label: 'Verification Complete', duration: 200 }
   ];
-
-  // Mock verification logic
-  const generateMockResult = () => {
-    const isAuthentic = Math.random() > 0.3; // 70% chance of authentic
-    const credibility = isAuthentic 
-      ? Math.floor(Math.random() * 20) + 80 // 80-99% for authentic
-      : Math.floor(Math.random() * 40) + 10; // 10-49% for fake
-
-    return {
-      id: `VER-${Date.now()}`,
-      isAuthentic,
-      credibilityPercentage: credibility,
-      status: isAuthentic ? 'authentic' : 'fake',
-      medicineDetails: {
-        name: "Paracetamol 500mg",
-        manufacturer: "Sun Pharmaceutical Industries Ltd.",
-        batchNumber: "PCM2024A1B2",
-        mfgDate: "2024-08-15",
-        expDate: "2026-08-14",
-        mrp: "₹45.00"
-      },
-      analysis: {
-        visualFingerprint: {
-          fontAccuracy: isAuthentic ? 98 : 45,
-          colorMatch: isAuthentic ? 96 : 38,
-          textureAnalysis: isAuthentic ? 94 : 52,
-          hologramVerification: isAuthentic ? 92 : 0
-        },
-        securityFeatures: {
-          qrCode: isAuthentic ? 'Valid' : 'Invalid',
-          serialNumber: isAuthentic ? 'Verified' : 'Suspicious',
-          packaging: isAuthentic ? 'Authentic' : 'Counterfeit'
-        }
-      },
-      timestamp: new Date()?.toISOString(),
-      processingTime: '3.2 seconds'
-    };
-  };
 
   useEffect(() => {
     if (!imageFile) return;
 
     let currentStageIndex = 0;
-    let totalProgress = 0;
+    let isCancelled = false;
 
-    const processStages = () => {
-      if (currentStageIndex >= processingStages?.length) {
-        const mockResult = generateMockResult();
-        setResult(mockResult);
-        onComplete?.(mockResult);
-        return;
-      }
+    // Start the real API verification
+    const verifyImage = async () => {
+      try {
+        // Start progress animation while API processes
+        const animateProgress = () => {
+          if (isCancelled) return;
+          
+          if (currentStageIndex >= processingStages.length - 1) return;
 
-      const currentStage = processingStages?.[currentStageIndex];
-      setProcessingStage(currentStage?.id);
+          const currentStage = processingStages[currentStageIndex];
+          setProcessingStage(currentStage.id);
 
-      // Animate progress for current stage
-      const stageProgress = 100 / processingStages?.length;
-      const startProgress = currentStageIndex * stageProgress;
-      const endProgress = (currentStageIndex + 1) * stageProgress;
-
-      let stageStartTime = Date.now();
-      const animateProgress = () => {
-        const elapsed = Date.now() - stageStartTime;
-        const stageProgressPercent = Math.min(elapsed / currentStage?.duration, 1);
-        const currentProgress = startProgress + (stageProgressPercent * stageProgress);
-        
-        setProgress(Math.floor(currentProgress));
-
-        if (stageProgressPercent < 1) {
-          requestAnimationFrame(animateProgress);
-        } else {
+          const stageProgress = 100 / processingStages.length;
+          const endProgress = (currentStageIndex + 1) * stageProgress;
+          
+          setProgress(Math.floor(endProgress));
+          
           currentStageIndex++;
-          setTimeout(processStages, 200);
-        }
-      };
+          if (currentStageIndex < processingStages.length - 1) {
+            setTimeout(animateProgress, currentStage.duration);
+          }
+        };
 
-      animateProgress();
+        animateProgress();
+
+        // Call the real API
+        const apiResult = await verifyMedicine(imageFile);
+        
+        if (isCancelled) return;
+
+        // Complete the progress
+        setProgress(100);
+        setProcessingStage('complete');
+        setResult(apiResult);
+        onComplete?.(apiResult);
+
+      } catch (err) {
+        if (isCancelled) return;
+        console.error('Verification error:', err);
+        setError(err.message || 'Verification failed. Please try again.');
+      }
     };
 
-    processStages();
+    verifyImage();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [imageFile]);
 
   const getStageIcon = (stage) => {
     switch (stage) {
       case 'analyzing': return 'Search';
       case 'extracting': return 'Scan';
-      case 'comparing': return 'Database';
+      case 'comparing': return 'Cpu';
       case 'calculating': return 'Calculator';
       case 'complete': return 'CheckCircle';
       default: return 'Loader';
@@ -117,6 +93,25 @@ const VerificationProcessor = ({
     const stage = processingStages?.find(s => s?.id === processingStage);
     return stage?.label || 'Processing...';
   };
+
+  // Error state
+  if (error) {
+    return (
+      <div className={`text-center ${className}`}>
+        <div className="w-24 h-24 mx-auto mb-6 rounded-full flex items-center justify-center bg-error/20">
+          <Icon name="AlertCircle" size={48} color="var(--color-error)" />
+        </div>
+        <h2 className="text-2xl font-bold text-error mb-2">Verification Failed</h2>
+        <p className="text-muted-foreground mb-6">{error}</p>
+        <button
+          onClick={onReset}
+          className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors focus-medical"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   if (result) {
     return (
