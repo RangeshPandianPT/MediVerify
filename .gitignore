@@ -5,4 +5,5 @@ package-lock.json
 /build
 .vscode/
 .idea/
-vite.config.*s.*
+# Keep .env out of git for security (use Netlify environment variables instead)
+.env
