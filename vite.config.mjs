@@ -5,6 +5,7 @@ import tagger from "@dhiwise/component-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: '/',
   // Using default dist directory for Netlify compatibility
   build: {
     outDir: "dist",

@@ -2,11 +2,9 @@
 const CACHE_NAME = 'mediverify-v1';
 const urlsToCache = [
   '/',
-  '/static/css/main.css',
-  '/static/js/main.js',
   '/manifest.json',
   '/favicon.jpg',
-  // Add other critical assets
+  // Assets will be cached dynamically as they're fetched
 ];
 
 // Install event
