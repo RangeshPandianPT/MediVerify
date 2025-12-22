@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, Database } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import Icon from '../AppIcon';
 import Button from './Button';
 import DarkModeToggle from './DarkModeToggle';
@@ -26,7 +26,7 @@ const Header = ({ user, verificationCount = 0, hasUnreadResults = false, title }
     { 
       label: 'Database', 
       path: '/medicine-database', 
-      icon: Database,
+      icon: 'Database',
       tooltip: 'Browse comprehensive medicine database'
     },
     { 

@@ -48,6 +48,49 @@
     --color-surface-foreground: #0F172A; /* slate-900 */
   }
 
+  /* Dark Mode Variables */
+  .dark {
+    --color-background: #0F172A; /* slate-900 */
+    --color-foreground: #F1F5F9; /* slate-100 */
+    --color-border: #334155; /* slate-700 */
+    --color-input: #1E293B; /* slate-800 */
+    --color-ring: #3B82F6; /* blue-500 */
+    
+    /* Card & Surface Colors */
+    --color-card: #1E293B; /* slate-800 */
+    --color-card-foreground: #F1F5F9; /* slate-100 */
+    --color-popover: #1E293B; /* slate-800 */
+    --color-popover-foreground: #F1F5F9; /* slate-100 */
+    --color-muted: #334155; /* slate-700 */
+    --color-muted-foreground: #94A3B8; /* slate-400 */
+    
+    /* Brand Colors - slightly brighter for dark mode */
+    --color-primary: #3B82F6; /* blue-500 */
+    --color-primary-foreground: #FFFFFF; /* white */
+    --color-secondary: #F1F5F9; /* slate-100 */
+    --color-secondary-foreground: #0F172A; /* slate-900 */
+    
+    /* State Colors */
+    --color-destructive: #F87171; /* red-400 */
+    --color-destructive-foreground: #0F172A; /* slate-900 */
+    --color-accent: #34D399; /* emerald-400 */
+    --color-accent-foreground: #0F172A; /* slate-900 */
+    --color-success: #34D399; /* emerald-400 */
+    --color-success-foreground: #0F172A; /* slate-900 */
+    --color-warning: #FBBF24; /* amber-400 */
+    --color-warning-foreground: #0F172A; /* slate-900 */
+    --color-error: #F87171; /* red-400 */
+    --color-error-foreground: #0F172A; /* slate-900 */
+    
+    /* Text Colors */
+    --color-text-primary: #F1F5F9; /* slate-100 */
+    --color-text-secondary: #94A3B8; /* slate-400 */
+    
+    /* Surface Colors */
+    --color-surface: #334155; /* slate-700 */
+    --color-surface-foreground: #F1F5F9; /* slate-100 */
+  }
+
   * {
     @apply border-border;
   }
