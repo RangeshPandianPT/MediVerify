@@ -114,9 +114,13 @@ class MedicineVerifier:
         # In production, this would be replaced with actual model predictions
         confidence = self._calculate_demo_confidence(image_bytes, raw_confidence)
         
+        # Extract details before final classification so OCR quality can affect status.
+        medicine_details = self._extract_medicine_details()
+        ocr_quality = self._evaluate_ocr_quality(medicine_details)
+
         # Determine authenticity (threshold at 0.5)
-        is_authentic = confidence >= 0.5
-        
+        is_authentic: Optional[bool] = confidence >= 0.5
+
         # Convert to percentage (0-100)
         if is_authentic:
             credibility = int(confidence * 100)
@@ -125,6 +129,21 @@ class MedicineVerifier:
         
         # Ensure credibility is within valid range
         credibility = max(10, min(99, credibility))
+
+        confidence_band = self._get_confidence_band(credibility)
+        status = "authentic" if is_authentic else "fake"
+        action_recommendation = self._get_action_recommendation(status, confidence_band, ocr_quality)
+
+        # Low OCR quality means the result should be considered inconclusive.
+        if ocr_quality["score"] < 40:
+            status = "suspicious"
+            is_authentic = None
+            confidence_band = "low"
+            credibility = min(credibility, 69)
+            action_recommendation = (
+                "Image text quality is too low for a trusted decision. "
+                "Recapture in better lighting or request pharmacist/manual verification."
+            )
         
         # Calculate processing time
         processing_time = time.time() - start_time
@@ -137,14 +156,63 @@ class MedicineVerifier:
             "id": f"VER-{int(datetime.now().timestamp() * 1000)}",
             "isAuthentic": is_authentic,
             "credibilityPercentage": credibility,
-            "status": "authentic" if is_authentic else "fake",
-            "medicineDetails": self._extract_medicine_details(),
+            "status": status,
+            "confidenceBand": confidence_band,
+            "actionRecommendation": action_recommendation,
+            "ocrQualityScore": ocr_quality["score"],
+            "ocrQualityReason": ocr_quality["reason"],
+            "medicineDetails": medicine_details,
             "analysis": analysis,
             "timestamp": datetime.now().isoformat(),
             "processingTime": f"{processing_time:.1f} seconds"
         }
         
         return result
+
+    def _get_confidence_band(self, credibility: int) -> str:
+        """Map credibility percentage to a simple confidence band."""
+        if credibility >= 85:
+            return "high"
+        if credibility >= 70:
+            return "medium"
+        return "low"
+
+    def _get_action_recommendation(self, status: str, confidence_band: str, ocr_quality: Dict[str, str]) -> str:
+        """Generate a short next-step recommendation for users."""
+        if ocr_quality["score"] < 40:
+            return "OCR quality is poor. Retake image and verify again before using medicine."
+
+        if status == "authentic" and confidence_band == "high":
+            return "Result is reliable. Keep package and bill for future checks."
+        if status == "authentic":
+            return "Looks genuine, but cross-check batch number and expiry before consumption."
+        if status == "fake" and confidence_band == "high":
+            return "Do not consume. Isolate this medicine and report to drug safety authorities."
+        return "Result is uncertain. Re-capture image from multiple angles or seek pharmacist review."
+
+    def _evaluate_ocr_quality(self, medicine_details: Dict[str, str]) -> Dict[str, str]:
+        """Estimate OCR extraction quality from non-placeholder extracted fields."""
+        placeholders = {
+            "Unknown Medicine",
+            "Unknown Manufacturer",
+            "N/A",
+            "Medicine (OCR unavailable)",
+            "Install Tesseract for OCR"
+        }
+
+        extracted_values = [value for value in medicine_details.values() if isinstance(value, str)]
+        valid_fields = [value for value in extracted_values if value.strip() and value not in placeholders]
+        total_fields = max(1, len(extracted_values))
+        score = int((len(valid_fields) / total_fields) * 100)
+
+        if score >= 80:
+            reason = "Strong text extraction from packaging"
+        elif score >= 40:
+            reason = "Partial text extraction; verify key fields manually"
+        else:
+            reason = "Insufficient readable text in image"
+
+        return {"score": score, "reason": reason}
     
     def _calculate_demo_confidence(self, image_bytes: bytes, raw_confidence: float) -> float:
         """
