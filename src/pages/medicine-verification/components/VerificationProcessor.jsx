@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Icon from '../../../components/AppIcon';
 import VerificationStatusIndicator from '../../../components/ui/VerificationStatusIndicator';
 import { verifyMedicine } from '../../../utils/api';
+import { verificationStorage } from '../../../utils/storage';
 
 const VerificationProcessor = ({ 
   imageFile, 
@@ -13,6 +14,8 @@ const VerificationProcessor = ({
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [savedToHistory, setSavedToHistory] = useState(false);
+  const [feedbackChoice, setFeedbackChoice] = useState(null);
 
   const processingStages = [
     { id: 'analyzing', label: 'Analyzing Image', duration: 800 },
@@ -31,6 +34,9 @@ const VerificationProcessor = ({
     // Start the real API verification
     const verifyImage = async () => {
       try {
+        setSavedToHistory(false);
+        setFeedbackChoice(null);
+
         // Start progress animation while API processes
         const animateProgress = () => {
           if (isCancelled) return;
@@ -94,6 +100,49 @@ const VerificationProcessor = ({
     return stage?.label || 'Processing...';
   };
 
+  const handleSaveToHistory = () => {
+    if (!result || savedToHistory) return;
+
+    const historyRecord = {
+      verificationId: result?.id,
+      medicineName: result?.medicineDetails?.name || 'Unknown Medicine',
+      verificationDate: result?.timestamp,
+      credibilityPercentage: result?.credibilityPercentage,
+      isAuthentic: result?.isAuthentic,
+      status: 'completed',
+      batchNumber: result?.medicineDetails?.batchNumber,
+      manufacturer: result?.medicineDetails?.manufacturer,
+      expiryDate: result?.medicineDetails?.expDate,
+      analysisDetails: {
+        processingTime: result?.processingTime,
+        confidenceBand: result?.confidenceBand,
+        ocrQualityScore: result?.ocrQualityScore,
+        ocrQualityReason: result?.ocrQualityReason,
+        recommendation: result?.actionRecommendation,
+        fontMatch: result?.analysis?.visualFingerprint?.fontAccuracy,
+        colorMatch: result?.analysis?.visualFingerprint?.colorMatch,
+        textureMatch: result?.analysis?.visualFingerprint?.textureAnalysis,
+      }
+    };
+
+    const saved = verificationStorage.addVerification(historyRecord);
+    if (saved) {
+      setSavedToHistory(true);
+    }
+  };
+
+  const handleFeedback = (helpful) => {
+    if (!result?.id) return;
+    const saved = verificationStorage.saveFeedback({
+      verificationId: result.id,
+      helpful,
+    });
+
+    if (saved) {
+      setFeedbackChoice(helpful);
+    }
+  };
+
   // Error state
   if (error) {
     return (
@@ -114,33 +163,48 @@ const VerificationProcessor = ({
   }
 
   if (result) {
+    const isAuthentic = result?.isAuthentic === true;
+    const isFake = result?.isAuthentic === false && result?.status !== 'suspicious';
+
     return (
       <div className={`${className}`}>
         {/* Verification Result */}
         <div className="text-center mb-8">
           <div className={`
             w-24 h-24 mx-auto mb-6 rounded-full flex items-center justify-center
-            ${result?.isAuthentic 
-              ? 'bg-success/20 glow-success' :'bg-error/20 glow-error'
+            ${isAuthentic
+              ? 'bg-success/20 glow-success'
+              : isFake
+              ? 'bg-error/20 glow-error'
+              : 'bg-warning/20 glow-warning'
             }
           `}>
             <Icon 
-              name={result?.isAuthentic ? 'CheckCircle' : 'XCircle'} 
+              name={isAuthentic ? 'CheckCircle' : isFake ? 'XCircle' : 'AlertTriangle'} 
               size={48} 
-              color={result?.isAuthentic ? 'var(--color-success)' : 'var(--color-error)'} 
+              color={
+                isAuthentic
+                  ? 'var(--color-success)'
+                  : isFake
+                  ? 'var(--color-error)'
+                  : 'var(--color-warning)'
+              }
             />
           </div>
           
           <h2 className={`
             text-3xl font-bold mb-2
-            ${result?.isAuthentic ? 'text-success' : 'text-error'}
+            ${isAuthentic ? 'text-success' : isFake ? 'text-error' : 'text-warning'}
           `}>
-            {result?.isAuthentic ? 'Medicine Verified ✅' : 'Fake Detected ❌'}
+            {isAuthentic ? 'Medicine Verified ✅' : isFake ? 'Fake Detected ❌' : 'Review Recommended ⚠️'}
           </h2>
           
           <p className="text-muted-foreground">
-            {result?.isAuthentic 
-              ? 'This medicine appears to be genuine and safe to use.' :'This medicine shows signs of being counterfeit. Do not use.'
+            {isAuthentic
+              ? 'This medicine appears to be genuine and safe to use.'
+              : isFake
+              ? 'This medicine shows signs of being counterfeit. Do not use.'
+              : 'The scan is inconclusive. Capture a clearer image or request pharmacist confirmation.'
             }
           </p>
         </div>
@@ -148,10 +212,37 @@ const VerificationProcessor = ({
         <VerificationStatusIndicator
           credibilityPercentage={result?.credibilityPercentage}
           isAuthentic={result?.isAuthentic}
+          status={result?.status}
           size="lg"
           animated={true}
           className="mb-8"
         />
+
+        {/* Decision Quality Guidance */}
+        <div className="bg-muted/40 border border-border rounded-xl p-4 mb-6">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <p className="text-sm text-muted-foreground">Confidence Band</p>
+              <p className="font-semibold text-foreground capitalize">
+                {result?.confidenceBand || 'unknown'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">OCR Quality</p>
+              <p className="font-semibold text-foreground">
+                {result?.ocrQualityScore ?? 0}%
+              </p>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground mt-3">
+            {result?.actionRecommendation || 'Follow pharmacist guidance before taking medicine.'}
+          </p>
+          {result?.ocrQualityReason && (
+            <p className="text-xs text-muted-foreground mt-2">
+              OCR note: {result.ocrQualityReason}
+            </p>
+          )}
+        </div>
         {/* Medicine Details */}
         <div className="bg-card border border-border rounded-xl p-6 mb-6">
           <h3 className="font-semibold text-foreground mb-4 flex items-center">
@@ -212,12 +303,43 @@ const VerificationProcessor = ({
           >
             Verify Another Medicine
           </button>
-          <button className="flex-1 px-6 py-3 bg-muted text-muted-foreground rounded-lg font-medium hover:bg-muted/80 transition-colors focus-medical">
-            Save to History
+          <button
+            onClick={handleSaveToHistory}
+            disabled={savedToHistory}
+            className="flex-1 px-6 py-3 bg-muted text-muted-foreground rounded-lg font-medium hover:bg-muted/80 transition-colors focus-medical disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {savedToHistory ? 'Saved to History' : 'Save to History'}
           </button>
         </div>
+
+        {/* Quick feedback loop for future model quality improvements */}
+        <div className="mt-6 p-4 bg-card border border-border rounded-lg">
+          <p className="text-sm font-medium text-foreground mb-3">Was this verification result helpful?</p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => handleFeedback(true)}
+              className={`px-4 py-2 rounded-lg border transition-colors ${
+                feedbackChoice === true
+                  ? 'bg-success/20 border-success text-success'
+                  : 'bg-background border-border text-foreground hover:bg-muted'
+              }`}
+            >
+              Yes, looks correct
+            </button>
+            <button
+              onClick={() => handleFeedback(false)}
+              className={`px-4 py-2 rounded-lg border transition-colors ${
+                feedbackChoice === false
+                  ? 'bg-error/20 border-error text-error'
+                  : 'bg-background border-border text-foreground hover:bg-muted'
+              }`}
+            >
+              No, needs review
+            </button>
+          </div>
+        </div>
         {/* Emergency Action for Fake Medicine */}
-        {!result?.isAuthentic && (
+        {result?.isAuthentic === false && result?.status !== 'suspicious' && (
           <div className="mt-6 p-4 bg-error/10 border border-error/20 rounded-lg">
             <div className="flex items-center space-x-2 mb-2">
               <Icon name="AlertTriangle" size={16} color="var(--color-error)" />
