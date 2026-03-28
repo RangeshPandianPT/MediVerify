@@ -72,6 +72,35 @@ export const verificationStorage = {
 
   clearHistory: () => {
     return storage.remove('verificationHistory');
+  },
+
+  getFeedback: () => {
+    return storage.get('verificationFeedback') || [];
+  },
+
+  saveFeedback: ({ verificationId, helpful }) => {
+    const feedbackItems = verificationStorage.getFeedback();
+    const existingIndex = feedbackItems.findIndex(
+      item => item.verificationId === verificationId
+    );
+
+    const entry = {
+      verificationId,
+      helpful,
+      timestamp: new Date().toISOString()
+    };
+
+    if (existingIndex >= 0) {
+      feedbackItems[existingIndex] = entry;
+    } else {
+      feedbackItems.unshift(entry);
+    }
+
+    if (feedbackItems.length > 200) {
+      feedbackItems.splice(200);
+    }
+
+    return storage.set('verificationFeedback', feedbackItems);
   }
 };
 
