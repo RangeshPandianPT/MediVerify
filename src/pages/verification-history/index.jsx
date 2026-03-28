@@ -10,6 +10,7 @@ import HistorySearchBar from './components/HistorySearchBar';
 import EmptyHistoryState from './components/EmptyHistoryState';
 
 import Button from '../../components/ui/Button';
+import { verificationStorage } from '../../utils/storage';
 
 const VerificationHistory = () => {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ const VerificationHistory = () => {
   const [selectedItems, setSelectedItems] = useState(new Set());
   const [searchQuery, setSearchQuery] = useState(searchParams?.get('search') || '');
   const [sortBy, setSortBy] = useState(searchParams?.get('sort') || 'date_desc');
+  const [savedVerifications, setSavedVerifications] = useState([]);
   const [filters, setFilters] = useState({
     search: searchParams?.get('search') || '',
     dateRange: searchParams?.get('dateRange') || 'all',
@@ -150,12 +152,28 @@ const VerificationHistory = () => {
     }
   ];
 
+  useEffect(() => {
+    const persistedHistory = verificationStorage.getHistory();
+    const normalizedHistory = persistedHistory.map((entry) => ({
+      ...entry,
+      verificationDate: entry?.verificationDate || entry?.timestamp || new Date().toISOString(),
+      medicineImage: entry?.medicineImage || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400',
+      status: entry?.status || 'completed',
+    }));
+    setSavedVerifications(normalizedHistory);
+  }, []);
+
+  const allVerifications = useMemo(
+    () => [...savedVerifications, ...mockVerifications],
+    [savedVerifications]
+  );
+
   // Calculate statistics
   const stats = useMemo(() => {
-    const completedVerifications = mockVerifications?.filter(v => v?.status === 'completed');
+    const completedVerifications = allVerifications?.filter(v => v?.status === 'completed');
     const authenticCount = completedVerifications?.filter(v => v?.isAuthentic === true)?.length;
     const fakeCount = completedVerifications?.filter(v => v?.isAuthentic === false)?.length;
-    const thisWeekCount = mockVerifications?.filter(v => {
+    const thisWeekCount = allVerifications?.filter(v => {
       const verificationDate = new Date(v.verificationDate);
       const weekAgo = new Date();
       weekAgo?.setDate(weekAgo?.getDate() - 7);
@@ -163,7 +181,7 @@ const VerificationHistory = () => {
     })?.length;
 
     return {
-      totalVerifications: mockVerifications?.length,
+      totalVerifications: allVerifications?.length,
       genuinePercentage: completedVerifications?.length > 0 
         ? Math.round((authenticCount / completedVerifications?.length) * 100) 
         : 0,
@@ -172,13 +190,13 @@ const VerificationHistory = () => {
       averageConfidence: completedVerifications?.length > 0
         ? Math.round(completedVerifications?.reduce((sum, v) => sum + v?.credibilityPercentage, 0) / completedVerifications?.length)
         : 0,
-      lastVerification: mockVerifications?.[0]?.verificationDate
+      lastVerification: allVerifications?.[0]?.verificationDate
     };
-  }, [mockVerifications]);
+  }, [allVerifications]);
 
   // Filter and sort verifications
   const filteredVerifications = useMemo(() => {
-    let filtered = [...mockVerifications];
+    let filtered = [...allVerifications];
 
     // Apply search filter
     if (searchQuery) {
@@ -264,7 +282,7 @@ const VerificationHistory = () => {
     });
 
     return filtered;
-  }, [mockVerifications, searchQuery, filters, sortBy]);
+  }, [allVerifications, searchQuery, filters, sortBy]);
 
   // Update URL params when filters change
   useEffect(() => {
@@ -315,8 +333,11 @@ const VerificationHistory = () => {
 
   const handleBulkDelete = () => {
     if (window.confirm(`Delete ${selectedItems?.size} selected verification records?`)) {
-      // In a real app, this would make an API call
-      console.log('Deleting items:', Array.from(selectedItems));
+      const selectedIds = Array.from(selectedItems);
+      setSavedVerifications(prev => prev.filter(item => !selectedItems.has(item.id)));
+      selectedIds.forEach((id) => {
+        verificationStorage.removeVerification(id);
+      });
       setSelectedItems(new Set());
     }
   };
@@ -346,7 +367,13 @@ const VerificationHistory = () => {
 
   const handleDeleteItem = (id) => {
     if (window.confirm('Delete this verification record?')) {
-      console.log('Deleting item:', id);
+      const wasSavedRecord = savedVerifications.some(item => item.id === id);
+      if (wasSavedRecord) {
+        verificationStorage.removeVerification(id);
+        setSavedVerifications(prev => prev.filter(item => item.id !== id));
+      } else {
+        console.log('Mock item retained (demo data):', id);
+      }
     }
   };
 
