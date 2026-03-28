@@ -41,9 +41,13 @@ class MedicineDetails(BaseModel):
 class VerificationResult(BaseModel):
     """Complete verification response."""
     id: str
-    isAuthentic: bool
+    isAuthentic: Optional[bool]
     credibilityPercentage: int
     status: str  # "authentic", "suspicious", "fake"
+    confidenceBand: str
+    actionRecommendation: str
+    ocrQualityScore: int
+    ocrQualityReason: str
     medicineDetails: MedicineDetails
     analysis: Analysis
     timestamp: str
