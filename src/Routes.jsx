@@ -1,7 +1,8 @@
 import React from "react";
-import { BrowserRouter, Routes as RouterRoutes, Route } from "react-router-dom";
+import { BrowserRouter, Routes as RouterRoutes, Route, Navigate } from "react-router-dom";
 import ScrollToTop from "./components/ScrollToTop";
 import ErrorBoundary from "./components/ErrorBoundary";
+import ProtectedRoute from './components/ProtectedRoute';
 import NotFound from "./pages/NotFound";
 import LoginPage from './pages/login';
 import VerificationResults from './pages/verification-results';
@@ -18,14 +19,14 @@ const Routes = () => {
       <ScrollToTop />
       <RouterRoutes>
         {/* Define your route here */}
-        <Route path="/" element={<MedicineVerification />} />
+        <Route path="/" element={<Navigate to="/user-dashboard" replace />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/verification-results" element={<VerificationResults />} />
-        <Route path="/verification-history" element={<VerificationHistory />} />
-        <Route path="/user-dashboard" element={<UserDashboard />} />
-        <Route path="/user-profile" element={<UserProfile />} />
-        <Route path="/medicine-verification" element={<MedicineVerification />} />
-        <Route path="/medicine-database" element={<MedicineDatabase />} />
+        <Route path="/verification-results" element={<ProtectedRoute><VerificationResults /></ProtectedRoute>} />
+        <Route path="/verification-history" element={<ProtectedRoute><VerificationHistory /></ProtectedRoute>} />
+        <Route path="/user-dashboard" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
+        <Route path="/user-profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+        <Route path="/medicine-verification" element={<ProtectedRoute><MedicineVerification /></ProtectedRoute>} />
+        <Route path="/medicine-database" element={<ProtectedRoute><MedicineDatabase /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </RouterRoutes>
       </ErrorBoundary>
