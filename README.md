@@ -96,6 +96,22 @@ Typical user flow:
 npm install
 ```
 
+2. Configure Firebase authentication for login:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Then update the values in `.env` with your Firebase project credentials.
+
+Required keys:
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_PROJECT_ID`
+- `VITE_FIREBASE_STORAGE_BUCKET`
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`
+- `VITE_FIREBASE_APP_ID`
+
 ---
 
 ## Available scripts
