@@ -5,6 +5,7 @@ import {
   getAuth,
   onAuthStateChanged,
   sendPasswordResetEmail,
+  signOut,
   signInWithEmailAndPassword,
   signInWithPopup,
   updateProfile
@@ -77,6 +78,11 @@ export const subscribeToAuthState = (callback) => {
 
   const auth = getFirebaseAuth();
   return onAuthStateChanged(auth, callback);
+};
+
+export const signOutUser = async () => {
+  const auth = getFirebaseAuth();
+  await signOut(auth);
 };
 
 export const getFirebaseErrorMessage = (error) => {
