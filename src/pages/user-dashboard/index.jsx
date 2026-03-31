@@ -41,25 +41,25 @@ const UserDashboard = () => {
         />
         
         <main className="content-offset">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             {/* Welcome Section */}
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-6">
+            <div className="mb-10">
+              <div className="flex items-center justify-between mb-8">
                 <div>
-                  <h1 className="text-3xl font-bold text-foreground mb-2">
+                  <h1 className="text-4xl font-bold text-foreground mb-2">
                     Welcome back, {user?.name?.split(' ')?.[0] || 'User'}! 👋
                   </h1>
-                  <p className="text-muted-foreground">
+                  <p className="text-lg text-muted-foreground font-medium">
                     Keep your family safe with instant medicine verification
                   </p>
                 </div>
-                <div className="hidden md:flex items-center space-x-4 text-sm text-muted-foreground">
-                  <div className="flex items-center space-x-1">
-                    <div className="w-2 h-2 bg-success rounded-full"></div>
-                    <span>System Online</span>
+                <div className="hidden md:flex items-center space-x-6 text-sm text-muted-foreground">
+                  <div className="flex items-center space-x-2 px-4 py-2 bg-muted rounded-lg">
+                    <div className="w-2.5 h-2.5 bg-success rounded-full"></div>
+                    <span className="font-medium">System Online</span>
                   </div>
-                  <div>
-                    Last updated: {new Date()?.toLocaleTimeString('en-IN', { 
+                  <div className="px-4 py-2 bg-muted rounded-lg font-medium">
+                    Updated: {new Date()?.toLocaleTimeString('en-IN', { 
                       hour: '2-digit', 
                       minute: '2-digit' 
                     })}

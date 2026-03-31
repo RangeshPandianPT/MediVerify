@@ -91,20 +91,45 @@
     --color-surface-foreground: #F1F5F9; /* slate-100 */
   }
 
+  /* Enhanced base styles for professional look */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  }
+
   * {
     @apply border-border;
   }
 
-  body {
-    @apply bg-background text-foreground;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  /* Typography improvements */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+    font-family: 'Inter', sans-serif;
+    line-height: 1.2;
   }
 
-  /* Typography Hierarchy */
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Inter', sans-serif;
-    font-weight: 600;
-    line-height: 1.2;
+  h1 {
+    @apply text-3xl md:text-4xl;
+  }
+
+  h2 {
+    @apply text-2xl md:text-3xl;
+  }
+
+  h3 {
+    @apply text-xl md:text-2xl;
+  }
+
+  h4 {
+    @apply text-lg md:text-xl;
+  }
+
+  p {
+    @apply text-base leading-relaxed;
   }
 
   .font-mono {
@@ -182,11 +207,6 @@
     transform: scale(0.98);
   }
 
-  /* Focus States for Accessibility */
-  .focus-medical {
-    @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
-  }
-
   /* Camera Overlay Styles */
   .camera-overlay {
     background: rgba(15, 23, 42, 0.8);
@@ -252,5 +272,87 @@
 
   .spacing-contextual-lg {
     padding: clamp(1.5rem, 3vw, 2.5rem);
+  }
+}
+
+@layer utilities {
+  /* Professional shadow utilities */
+  .shadow-subtle {
+    @apply shadow-sm;
+  }
+
+  .shadow-elevated {
+    @apply shadow-lg;
+  }
+
+  .shadow-modal {
+    @apply shadow-2xl;
+  }
+
+  /* Border utilities */
+  .border-subtle {
+    @apply border border-border/50;
+  }
+
+  .border-strong {
+    @apply border border-border;
+  }
+
+  /* Spacing utilities */
+  .spacing-xs {
+    @apply space-y-2;
+  }
+
+  .spacing-sm {
+    @apply space-y-4;
+  }
+
+  .spacing-base {
+    @apply space-y-6;
+  }
+
+  .spacing-lg {
+    @apply space-y-8;
+  }
+
+  /* Card base styles */
+  .card-base {
+    @apply bg-card rounded-lg border border-border shadow-subtle;
+  }
+
+  .card-interactive {
+    @apply card-base transition-all duration-200 hover:shadow-medical;
+  }
+
+  /* Button enhancement utilities */
+  .btn-base {
+    @apply inline-flex items-center justify-center rounded-md font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Focus states */
+  .focus-medical {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background;
+  }
+
+  /* Text utilities */
+  .text-heading-primary {
+    @apply text-foreground font-bold tracking-tight;
+  }
+
+  .text-heading-secondary {
+    @apply text-slate-700 dark:text-slate-300 font-semibold;
+  }
+
+  .text-body-primary {
+    @apply text-foreground;
+  }
+
+  .text-body-secondary {
+    @apply text-muted-foreground;
+  }
+
+  /* Animation utilities */
+  .smooth-transition {
+    @apply transition-all duration-300 ease-out;
   }
 }

@@ -15,7 +15,7 @@ const Input = React.forwardRef(({
     const inputId = id || `input-${Math.random()?.toString(36)?.substr(2, 9)}`;
 
     // Base input classes
-    const baseInputClasses = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+    const baseInputClasses = "flex h-11 w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground placeholder:font-normal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 shadow-subtle hover:border-primary/40";
 
     // Checkbox-specific styles
     if (type === "checkbox") {
@@ -51,12 +51,12 @@ const Input = React.forwardRef(({
 
     // For regular inputs with wrapper structure
     return (
-        <div className="space-y-2">
+        <div className="space-y-3">
             {label && (
                 <label
                     htmlFor={inputId}
                     className={cn(
-                        "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+                        "text-sm font-semibold leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
                         error ? "text-destructive" : "text-foreground"
                     )}
                 >
@@ -78,14 +78,14 @@ const Input = React.forwardRef(({
             />
 
             {description && !error && (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground font-normal">
                     {description}
                 </p>
             )}
 
             {error && (
-                <p className="text-sm text-destructive">
-                    {error}
+                <p className="text-sm text-destructive font-medium flex items-center gap-1">
+                    <span>⚠</span> {error}
                 </p>
             )}
         </div>

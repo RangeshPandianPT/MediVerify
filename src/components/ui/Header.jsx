@@ -56,45 +56,43 @@ const Header = ({ user, verificationCount = 0, hasUnreadResults = false, title }
 
   return (
     <>
-      <header className="nav-fixed bg-background border-b border-border shadow-medical">
+      <header className="nav-fixed bg-card border-b border-border shadow-elevated">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-20">
             {/* Logo Section */}
             <div className="flex items-center">
               <div className="flex-shrink-0 flex items-center">
-                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
-                  <Icon name="Shield" size={20} color="white" />
+                <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center mr-3 shadow-md">
+                  <Icon name="Shield" size={24} color="white" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xl font-bold text-foreground">MediVerify</span>
-                  <span className="text-xs text-muted-foreground hidden sm:block">Protect your family</span>
+                  <span className="text-2xl font-bold text-foreground">MediVerify</span>
+                  <span className="text-xs text-muted-foreground hidden sm:block font-medium">Protect your family</span>
                 </div>
               </div>
             </div>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center space-x-1">
+            <nav className="hidden md:flex items-center space-x-2">
               {navigationItems?.map((item) => (
                 <button
                   key={item?.path}
                   onClick={() => handleNavigate(item?.path)}
                   className={`
-                    relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
-                    focus-medical spring-transform
+                    relative px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200
+                    focus-medical spring-transform flex items-center space-x-2
                     ${isActive(item?.path)
-                      ? 'bg-primary text-primary-foreground shadow-medical'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                      ? 'bg-primary/10 text-primary border border-primary/30 shadow-subtle'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                     }
                   `}
                   title={item?.tooltip}
                 >
-                  <div className="flex items-center space-x-2">
-                    <Icon name={item?.icon} size={16} />
-                    <span>{item?.label}</span>
-                    {item?.path === '/verification-history' && hasUnreadResults && (
-                      <div className="w-2 h-2 bg-accent rounded-full"></div>
-                    )}
-                  </div>
+                  <Icon name={item?.icon} size={18} />
+                  <span>{item?.label}</span>
+                  {item?.path === '/verification-history' && hasUnreadResults && (
+                    <div className="w-2 h-2 bg-accent rounded-full ml-1"></div>
+                  )}
                 </button>
               ))}
             </nav>
@@ -106,21 +104,21 @@ const Header = ({ user, verificationCount = 0, hasUnreadResults = false, title }
               
               {/* Verification Count Badge */}
               {verificationCount > 0 && (
-                <div className="hidden sm:flex items-center space-x-2 px-3 py-1 bg-muted rounded-full">
-                  <Icon name="CheckCircle" size={14} color="var(--color-success)" />
-                  <span className="text-sm font-mono text-muted-foreground">{verificationCount}</span>
+                <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 bg-success/10 border border-success/30 rounded-full">
+                  <Icon name="CheckCircle" size={16} color="var(--color-success)" />
+                  <span className="text-sm font-semibold text-success">{verificationCount}</span>
                 </div>
               )}
 
               {/* User Avatar */}
               {user && (
-                <div className="hidden md:flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                    <span className="text-sm font-semibold text-primary-foreground">
+                <div className="hidden md:flex items-center space-x-3 px-4 py-2 bg-muted rounded-lg">
+                  <div className="w-9 h-9 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center shadow-subtle">
+                    <span className="text-sm font-bold text-primary-foreground">
                       {user?.name?.charAt(0) || 'U'}
                     </span>
                   </div>
-                  <span className="text-sm font-medium text-foreground">{user?.name}</span>
+                  <span className="text-sm font-semibold text-foreground">{user?.name}</span>
                 </div>
               )}
 
@@ -130,7 +128,7 @@ const Header = ({ user, verificationCount = 0, hasUnreadResults = false, title }
                 className="md:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted focus-medical spring-transform"
                 aria-label="Toggle mobile menu"
               >
-                <Icon name={isMobileMenuOpen ? 'X' : 'Menu'} size={20} />
+                <Icon name={isMobileMenuOpen ? 'X' : 'Menu'} size={24} />
               </button>
             </div>
           </div>
