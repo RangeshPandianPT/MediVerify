@@ -1,25 +1,28 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import { Checkbox } from '../../../components/ui/Checkbox';
 
-const LoginForm = ({ onSubmit, isLoading = false }) => {
+const LoginForm = ({
+  onEmailPasswordAuth,
+  onGoogleAuth,
+  onForgotPassword,
+  isLoading = false
+}) => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialMode = searchParams.get('mode') === 'signup' ? 'signup' : 'signin';
   const [formData, setFormData] = useState({
+    fullName: '',
     email: '',
     password: '',
     rememberMe: false
   });
+  const [authMode, setAuthMode] = useState(initialMode);
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
-
-  // Mock credentials for demo
-  const mockCredentials = {
-    email: 'user@mediverify.com',
-    password: 'MediVerify123'
-  };
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -30,6 +33,10 @@ const LoginForm = ({ onSubmit, isLoading = false }) => {
 
   const validateForm = () => {
     const newErrors = {};
+
+    if (authMode === 'signup' && !formData?.fullName?.trim()) {
+      newErrors.fullName = 'Full name is required to create an account';
+    }
     
     if (!formData?.email) {
       newErrors.email = 'Email is required';
@@ -52,28 +59,41 @@ const LoginForm = ({ onSubmit, isLoading = false }) => {
     
     if (!validateForm()) return;
     
-    // Check mock credentials
-    if (formData?.email !== mockCredentials?.email || formData?.password !== mockCredentials?.password) {
-      setErrors({
-        general: `Invalid credentials. Use: ${mockCredentials?.email} / ${mockCredentials?.password}`
-      });
-      return;
-    }
-    
     try {
-      await onSubmit?.(formData);
+      await onEmailPasswordAuth?.(formData, authMode);
       navigate('/user-dashboard');
     } catch (error) {
-      setErrors({ general: 'Login failed. Please try again.' });
+      setErrors({ general: error?.message || 'Authentication failed. Please try again.' });
     }
   };
 
-  const handleForgotPassword = () => {
-    alert('Password reset functionality will be available soon. Use demo credentials for now.');
+  const handleForgotPassword = async () => {
+    if (!formData?.email) {
+      setErrors({ email: 'Enter your email first to reset password.' });
+      return;
+    }
+
+    try {
+      await onForgotPassword?.(formData?.email);
+      setErrors({ general: 'Password reset email sent. Please check your inbox.' });
+    } catch (error) {
+      setErrors({ general: error?.message || 'Unable to send reset email. Please try again.' });
+    }
   };
 
-  const handleGoogleSignIn = () => {
-    alert('Google Sign-In will be available in the next update.');
+  const handleGoogleSignIn = async () => {
+    try {
+      await onGoogleAuth?.();
+      navigate('/user-dashboard');
+    } catch (error) {
+      setErrors({ general: error?.message || 'Google sign-in failed. Please try again.' });
+    }
+  };
+
+  const toggleMode = (mode) => {
+    setAuthMode(mode);
+    setErrors({});
+    setSearchParams(mode === 'signup' ? { mode: 'signup' } : {});
   };
 
   return (
@@ -87,6 +107,36 @@ const LoginForm = ({ onSubmit, isLoading = false }) => {
               <p className="text-sm text-error">{errors?.general}</p>
             </div>
           </div>
+        )}
+
+        <div className="grid grid-cols-2 bg-muted/40 rounded-lg p-1 gap-1">
+          <button
+            type="button"
+            className={`py-2 text-sm rounded-md transition-colors ${authMode === 'signin' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            onClick={() => toggleMode('signin')}
+          >
+            Sign In
+          </button>
+          <button
+            type="button"
+            className={`py-2 text-sm rounded-md transition-colors ${authMode === 'signup' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            onClick={() => toggleMode('signup')}
+          >
+            Create Account
+          </button>
+        </div>
+
+        {authMode === 'signup' && (
+          <Input
+            type="text"
+            label="Full Name"
+            placeholder="Enter your full name"
+            value={formData?.fullName}
+            onChange={(e) => handleInputChange('fullName', e?.target?.value)}
+            error={errors?.fullName}
+            required
+            className="mb-0"
+          />
         )}
 
         {/* Email Field */}
@@ -131,13 +181,15 @@ const LoginForm = ({ onSubmit, isLoading = false }) => {
             onChange={(e) => handleInputChange('rememberMe', e?.target?.checked)}
             size="sm"
           />
-          <button
-            type="button"
-            onClick={handleForgotPassword}
-            className="text-sm text-primary hover:text-primary/80 focus-medical"
-          >
-            Forgot password?
-          </button>
+          {authMode === 'signin' && (
+            <button
+              type="button"
+              onClick={handleForgotPassword}
+              className="text-sm text-primary hover:text-primary/80 focus-medical"
+            >
+              Forgot password?
+            </button>
+          )}
         </div>
 
         {/* Sign In Button */}
@@ -146,10 +198,10 @@ const LoginForm = ({ onSubmit, isLoading = false }) => {
           loading={isLoading}
           fullWidth
           className="h-12"
-          iconName="LogIn"
+          iconName={authMode === 'signup' ? 'UserPlus' : 'LogIn'}
           iconPosition="right"
         >
-          Sign In
+          {authMode === 'signup' ? 'Create Account' : 'Sign In'}
         </Button>
 
         {/* Divider */}
@@ -167,23 +219,22 @@ const LoginForm = ({ onSubmit, isLoading = false }) => {
           type="button"
           variant="outline"
           onClick={handleGoogleSignIn}
+          loading={isLoading}
           fullWidth
           className="h-12"
           iconName="Chrome"
           iconPosition="left"
         >
-          Sign in with Google
+          Continue with Google
         </Button>
 
-        {/* Demo Credentials Info */}
         <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
           <div className="flex items-start space-x-2">
             <Icon name="Info" size={16} color="var(--color-accent)" />
             <div>
-              <p className="text-sm font-medium text-foreground mb-1">Demo Credentials</p>
+              <p className="text-sm font-medium text-foreground mb-1">Secure Authentication Enabled</p>
               <p className="text-xs text-muted-foreground">
-                Email: {mockCredentials?.email}<br />
-                Password: {mockCredentials?.password}
+                Use your Firebase email login or Google account for secure access.
               </p>
             </div>
           </div>
