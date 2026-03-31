@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
 import Icon from '../AppIcon';
 import Button from './Button';
 import DarkModeToggle from './DarkModeToggle';
+import { signOutUser } from '../../utils/firebaseAuth';
 
 const Header = ({ user, verificationCount = 0, hasUnreadResults = false, title }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const userMenuRef = useRef(null);
 
   const navigationItems = [
     { 
@@ -52,6 +54,56 @@ const Header = ({ user, verificationCount = 0, hasUnreadResults = false, title }
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  useEffect(() => {
+    setIsUserMenuOpen(false);
+  }, [location?.pathname]);
+
+  useEffect(() => {
+    if (!isUserMenuOpen) {
+      return undefined;
+    }
+
+    const handleDocumentClick = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setIsUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleDocumentClick);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleDocumentClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isUserMenuOpen]);
+
+  const handleOpenProfile = () => {
+    setIsUserMenuOpen(false);
+    handleNavigate('/user-profile');
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOutUser();
+    } catch (error) {
+      // Continue with local session cleanup even if Firebase sign-out is unavailable.
+      console.warn('Sign-out fallback activated:', error?.message || error);
+    }
+
+    localStorage.removeItem('mediverify_user');
+    sessionStorage.removeItem('mediverify_user');
+    setIsUserMenuOpen(false);
+    setIsMobileMenuOpen(false);
+    navigate('/login', { replace: true });
   };
 
   return (
@@ -110,15 +162,63 @@ const Header = ({ user, verificationCount = 0, hasUnreadResults = false, title }
                 </div>
               )}
 
-              {/* User Avatar */}
+              {/* User Avatar Dropdown */}
               {user && (
-                <div className="hidden md:flex items-center space-x-3 px-4 py-2 bg-muted rounded-lg">
-                  <div className="w-9 h-9 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center shadow-subtle">
-                    <span className="text-sm font-bold text-primary-foreground">
-                      {user?.name?.charAt(0) || 'U'}
-                    </span>
-                  </div>
-                  <span className="text-sm font-semibold text-foreground">{user?.name}</span>
+                <div className="relative hidden md:block" ref={userMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsUserMenuOpen((prev) => !prev)}
+                    className="flex items-center space-x-3 px-4 py-2 bg-muted rounded-lg border border-transparent hover:border-border transition-colors focus-medical"
+                    aria-haspopup="menu"
+                    aria-expanded={isUserMenuOpen}
+                    aria-label="Open account menu"
+                  >
+                    <div className="w-9 h-9 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center shadow-subtle">
+                      <span className="text-sm font-bold text-primary-foreground">
+                        {user?.name?.charAt(0) || 'U'}
+                      </span>
+                    </div>
+                    <span className="text-sm font-semibold text-foreground">{user?.name}</span>
+                    <Icon
+                      name={isUserMenuOpen ? 'ChevronUp' : 'ChevronDown'}
+                      size={16}
+                      className="text-muted-foreground"
+                    />
+                  </button>
+
+                  {isUserMenuOpen && (
+                    <div
+                      role="menu"
+                      className="absolute right-0 top-full mt-2 w-60 bg-popover border border-border rounded-xl shadow-medical-lg p-2 z-[260]"
+                    >
+                      <div className="px-3 py-2 border-b border-border mb-2">
+                        <p className="text-sm font-semibold text-foreground truncate">{user?.name || 'User'}</p>
+                        {user?.email && (
+                          <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={handleOpenProfile}
+                        className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg text-sm text-foreground hover:bg-muted transition-colors"
+                      >
+                        <Icon name="User" size={16} />
+                        <span>View Profile</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={handleSignOut}
+                        className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg text-sm text-error hover:bg-error/10 transition-colors"
+                      >
+                        <Icon name="LogOut" size={16} />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -216,6 +316,31 @@ const Header = ({ user, verificationCount = 0, hasUnreadResults = false, title }
                 </button>
               ))}
             </nav>
+
+            {user && (
+              <div className="mt-6 grid grid-cols-1 gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  iconName="User"
+                  iconPosition="left"
+                  onClick={handleOpenProfile}
+                >
+                  View Profile
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-error text-error hover:bg-error hover:text-error-foreground"
+                  iconName="LogOut"
+                  iconPosition="left"
+                  onClick={handleSignOut}
+                >
+                  Sign Out
+                </Button>
+              </div>
+            )}
 
             {/* Emergency Contact */}
             <div className="mt-8 p-4 bg-error/10 border border-error/20 rounded-lg">

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/ui/Header';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
+import { useToast } from '../../components/ui/Toast';
 import ProfileHeader from './components/ProfileHeader';
 import VerificationStats from './components/VerificationStats';
 import SettingsPanel from './components/SettingsPanel';
@@ -12,9 +13,12 @@ import { signOutUser, subscribeToAuthState } from '../../utils/firebaseAuth';
 
 const UserProfile = () => {
   const navigate = useNavigate();
+  const { addToast } = useToast();
   const [activeTab, setActiveTab] = useState('profile');
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isSignOutModalOpen, setIsSignOutModalOpen] = useState(false);
+  const modalContainerRef = useRef(null);
+  const cancelButtonRef = useRef(null);
   const [user, setUser] = useState({
     name: "Rajesh Kumar",
     email: "rajesh.kumar@email.com",
@@ -91,6 +95,12 @@ const UserProfile = () => {
     emergencyPhone: "+91 87654 32109"
   });
 
+  const [sessionSecurity, setSessionSecurity] = useState({
+    emailVerified: false,
+    providerId: 'password',
+    lastSignInTime: null
+  });
+
   const [emergencyContacts, setEmergencyContacts] = useState([
     {
       id: 1,
@@ -130,6 +140,12 @@ const UserProfile = () => {
         return;
       }
 
+      setSessionSecurity({
+        emailVerified: Boolean(firebaseUser?.emailVerified),
+        providerId: firebaseUser?.providerData?.[0]?.providerId || 'password',
+        lastSignInTime: firebaseUser?.metadata?.lastSignInTime || null
+      });
+
       const localSessionUser = JSON.parse(localStorage.getItem('user') || '{}');
       setUser((prev) => ({
         ...prev,
@@ -144,6 +160,63 @@ const UserProfile = () => {
 
     return unsubscribe;
   }, [navigate]);
+
+  useEffect(() => {
+    if (!isSignOutModalOpen) return undefined;
+
+    const previousActiveElement = document.activeElement;
+    const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+    const getFocusableElements = () => {
+      if (!modalContainerRef.current) return [];
+      return Array.from(modalContainerRef.current.querySelectorAll(focusableSelector)).filter(
+        (element) => !element.hasAttribute('disabled') && element.getAttribute('aria-hidden') !== 'true'
+      );
+    };
+
+    const focusTimer = window.setTimeout(() => {
+      cancelButtonRef.current?.focus();
+    }, 0);
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        if (!isSigningOut) {
+          setIsSignOutModalOpen(false);
+        }
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+
+      const focusableElements = getFocusableElements();
+      if (!focusableElements.length) return;
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+      const activeElement = document.activeElement;
+
+      if (event.shiftKey && activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    };
+
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', handleKeyDown);
+      if (previousActiveElement && previousActiveElement.focus) {
+        previousActiveElement.focus();
+      }
+    };
+  }, [isSignOutModalOpen, isSigningOut]);
 
   const handleUpdateProfile = (updatedData) => {
     const newUserData = { ...user, ...updatedData };
@@ -167,16 +240,25 @@ const UserProfile = () => {
   };
 
   const handleSignOut = async () => {
+    let isSignOutSuccessful = false;
+
     try {
       setIsSigningOut(true);
       await signOutUser();
+      isSignOutSuccessful = true;
+      addToast('Signed out securely. See you again soon.', 'success');
     } catch (error) {
       console.error('Sign out failed:', error);
+      addToast('Sign out failed. Please try again.', 'error');
     } finally {
-      localStorage.removeItem('isLoggedIn');
-      localStorage.removeItem('userMode');
-      localStorage.removeItem('user');
-      navigate('/login', { replace: true });
+      if (isSignOutSuccessful) {
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('userMode');
+        localStorage.removeItem('user');
+        navigate('/login', { replace: true });
+      }
+
+      setIsSignOutModalOpen(false);
       setIsSigningOut(false);
     }
   };
@@ -193,6 +275,31 @@ const UserProfile = () => {
   const confirmSignOut = async () => {
     await handleSignOut();
   };
+
+  const activeSecurityChecks = [
+    sessionSecurity?.emailVerified,
+    securityData?.twoFactorEnabled,
+    Boolean(securityData?.emergencyEmail || securityData?.emergencyPhone)
+  ]?.filter(Boolean)?.length;
+
+  const securityScore = Math.round((activeSecurityChecks / 3) * 100);
+
+  const securityTone = securityScore >= 80
+    ? 'text-success'
+    : securityScore >= 50
+      ? 'text-warning'
+      : 'text-error';
+
+  const providerLabel = sessionSecurity?.providerId === 'google.com' ? 'Google Login' : 'Email & Password';
+
+  const formattedLastSignIn = sessionSecurity?.lastSignInTime
+    ? new Date(sessionSecurity.lastSignInTime).toLocaleString([], {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+    : 'Active now';
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -281,6 +388,45 @@ const UserProfile = () => {
               >
                 Sign Out
               </Button>
+            </div>
+          </div>
+
+          {/* Mobile Security Summary */}
+          <div className="mb-6 lg:hidden rounded-2xl border border-border bg-card p-4 shadow-subtle">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Account Security</p>
+                <p className={`mt-1 text-2xl font-bold ${securityTone}`}>{securityScore}%</p>
+              </div>
+              <span className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium text-foreground">
+                {providerLabel}
+              </span>
+            </div>
+
+            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-300"
+                style={{ width: `${securityScore}%` }}
+              />
+            </div>
+
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <div className="rounded-lg border border-border bg-background p-2 text-center">
+                <p className="text-[11px] text-muted-foreground">Email</p>
+                <p className={`mt-1 text-xs font-semibold ${sessionSecurity?.emailVerified ? 'text-success' : 'text-warning'}`}>
+                  {sessionSecurity?.emailVerified ? 'Verified' : 'Pending'}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-background p-2 text-center">
+                <p className="text-[11px] text-muted-foreground">2FA</p>
+                <p className={`mt-1 text-xs font-semibold ${securityData?.twoFactorEnabled ? 'text-success' : 'text-warning'}`}>
+                  {securityData?.twoFactorEnabled ? 'Enabled' : 'Disabled'}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-background p-2 text-center">
+                <p className="text-[11px] text-muted-foreground">Session</p>
+                <p className="mt-1 text-xs font-semibold text-foreground">{formattedLastSignIn}</p>
+              </div>
             </div>
           </div>
 
@@ -402,19 +548,28 @@ const UserProfile = () => {
             className="absolute inset-0 bg-black/45 backdrop-blur-sm"
             onClick={closeSignOutModal}
           />
-          <div className="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-medical-xl">
+          <div
+            ref={modalContainerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="signout-modal-title"
+            aria-describedby="signout-modal-description"
+            className="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-medical-xl"
+          >
             <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-full bg-warning/10 text-warning">
               <Icon name="ShieldAlert" size={22} />
             </div>
-            <h3 className="text-xl font-semibold text-foreground">Sign out from your account?</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <h3 id="signout-modal-title" className="text-xl font-semibold text-foreground">Sign out from your account?</h3>
+            <p id="signout-modal-description" className="mt-2 text-sm text-muted-foreground">
               You will need to sign in again to access Dashboard, Verification, Database, and Profile sections.
             </p>
+            <p className="mt-1 text-xs text-muted-foreground">Tip: Press Escape to close this dialog.</p>
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button
                 variant="outline"
                 onClick={closeSignOutModal}
                 disabled={isSigningOut}
+                ref={cancelButtonRef}
                 className="w-full sm:w-auto"
               >
                 Cancel
