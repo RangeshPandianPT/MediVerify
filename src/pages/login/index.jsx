@@ -4,18 +4,44 @@ import LoginForm from './components/LoginForm';
 import TrustSignals from './components/TrustSignals';
 import GuestAccessCard from './components/GuestAccessCard';
 import PlatformBranding from './components/PlatformBranding';
+import {
+  authenticateWithEmailPassword,
+  authenticateWithGoogle,
+  getFirebaseErrorMessage,
+  isFirebaseConfigured,
+  resetPasswordForEmail,
+  subscribeToAuthState
+} from '../../utils/firebaseAuth';
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [showMobileView, setShowMobileView] = useState(false);
 
+  const persistUserSession = (user, mode = 'authenticated') => {
+    localStorage.setItem('isLoggedIn', 'true');
+    localStorage.setItem('userMode', mode);
+    localStorage.setItem('user', JSON.stringify({
+      name: user?.displayName || 'MediVerify User',
+      email: user?.email || '',
+      photoURL: user?.photoURL || '',
+      uid: user?.uid || '',
+      provider: user?.providerData?.[0]?.providerId || 'password'
+    }));
+  };
+
   useEffect(() => {
-    // Check if user is already logged in
-    const isLoggedIn = localStorage.getItem('isLoggedIn');
-    if (isLoggedIn === 'true') {
+    const storedLoginState = localStorage.getItem('isLoggedIn');
+    if (storedLoginState === 'true') {
       navigate('/user-dashboard');
     }
+
+    const unsubscribe = subscribeToAuthState((user) => {
+      if (user) {
+        persistUserSession(user);
+        navigate('/user-dashboard');
+      }
+    });
 
     // Check screen size for mobile optimization
     const checkScreenSize = () => {
@@ -25,32 +51,64 @@ const LoginPage = () => {
     checkScreenSize();
     window.addEventListener('resize', checkScreenSize);
     
-    return () => window.removeEventListener('resize', checkScreenSize);
+    return () => {
+      unsubscribe();
+      window.removeEventListener('resize', checkScreenSize);
+    };
   }, [navigate]);
 
-  const handleLogin = async (formData) => {
+  const handleEmailPasswordAuth = async (formData, mode) => {
     setIsLoading(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Store login state
-    localStorage.setItem('isLoggedIn', 'true');
-    localStorage.setItem('userMode', 'authenticated');
-    localStorage.setItem('user', JSON.stringify({
-      name: 'Rajesh Kumar',
-      email: formData?.email,
-      phone: '+91 98765 43210',
-      location: 'Mumbai, Maharashtra',
-      joinDate: '2024-01-15',
-      verificationCount: 47
-    }));
-    
-    setIsLoading(false);
+
+    try {
+      if (!isFirebaseConfigured) {
+        throw new Error('Firebase config is missing. Set VITE_FIREBASE_* env variables.');
+      }
+
+      const user = await authenticateWithEmailPassword({
+        email: formData?.email,
+        password: formData?.password,
+        fullName: formData?.fullName,
+        mode
+      });
+
+      persistUserSession(user, 'authenticated');
+      return user;
+    } catch (error) {
+      throw new Error(getFirebaseErrorMessage(error));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleAuth = async () => {
+    setIsLoading(true);
+
+    try {
+      if (!isFirebaseConfigured) {
+        throw new Error('Firebase config is missing. Set VITE_FIREBASE_* env variables.');
+      }
+
+      const user = await authenticateWithGoogle();
+      persistUserSession(user, 'authenticated');
+      return user;
+    } catch (error) {
+      throw new Error(getFirebaseErrorMessage(error));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (email) => {
+    if (!isFirebaseConfigured) {
+      throw new Error('Firebase config is missing. Set VITE_FIREBASE_* env variables.');
+    }
+
+    await resetPasswordForEmail(email);
   };
 
   const handleRegisterRedirect = () => {
-    navigate('/register');
+    navigate('/login?mode=signup');
   };
 
   return (
@@ -73,7 +131,12 @@ const LoginPage = () => {
 
             {/* Main Content */}
             <div className="flex-1 p-6 space-y-6 overflow-y-auto">
-              <LoginForm onSubmit={handleLogin} isLoading={isLoading} />
+              <LoginForm
+                onEmailPasswordAuth={handleEmailPasswordAuth}
+                onGoogleAuth={handleGoogleAuth}
+                onForgotPassword={handleForgotPassword}
+                isLoading={isLoading}
+              />
               <GuestAccessCard />
               
               {/* Registration Link */}
@@ -154,16 +217,21 @@ const LoginPage = () => {
                     </p>
                   </div>
 
-                  <LoginForm onSubmit={handleLogin} isLoading={isLoading} />
+                  <LoginForm
+                    onEmailPasswordAuth={handleEmailPasswordAuth}
+                    onGoogleAuth={handleGoogleAuth}
+                    onForgotPassword={handleForgotPassword}
+                    isLoading={isLoading}
+                  />
                 </div>
 
-                {/* Guest Access & Registration */}
+                {/* Security & Registration */}
                 <div className="space-y-4">
                   <GuestAccessCard />
                   
                   <div className="text-center p-6 bg-background/50 backdrop-blur-sm border border-border rounded-xl">
                     <p className="text-sm text-muted-foreground mb-3">
-                      Don't have an account?
+                      Need a secure account?
                     </p>
                     <button
                       onClick={handleRegisterRedirect}
@@ -172,7 +240,7 @@ const LoginPage = () => {
                       Create your MediVerify account →
                     </button>
                     <p className="text-xs text-muted-foreground mt-2">
-                      Join thousands protecting their families
+                      Sign in to unlock protected verification tools
                     </p>
                   </div>
                 </div>
