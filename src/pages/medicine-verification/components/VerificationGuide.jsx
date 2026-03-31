@@ -266,11 +266,11 @@ const VerificationGuide = ({ className = '' }) => {
         )}
       </div>
       {/* Quick Actions */}
-      <div className="flex flex-col sm:flex-row gap-3 mt-6 pt-6 border-t border-border">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6 pt-6 border-t border-border">
         <Button
           variant="outline"
           size="sm"
-          className="flex-1"
+          className="w-full min-w-0 justify-center whitespace-normal text-center leading-tight"
           iconName="Phone"
           iconPosition="left"
         >
@@ -279,7 +279,7 @@ const VerificationGuide = ({ className = '' }) => {
         <Button
           variant="outline"
           size="sm"
-          className="flex-1"
+          className="w-full min-w-0 justify-center whitespace-normal text-center leading-tight"
           iconName="ExternalLink"
           iconPosition="left"
         >
