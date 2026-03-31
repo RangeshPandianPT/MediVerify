@@ -71,27 +71,27 @@ const StatisticsPanel = ({ className = '' }) => {
           Your contribution to medicine safety in India
         </p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 auto-rows-fr">
         {statCards?.map((stat) => (
           <div
             key={stat?.id}
-            className={`${stat?.bgColor} border border-${stat?.color}/20 rounded-xl p-4 hover:shadow-medical transition-all duration-200`}
+            className={`${stat?.bgColor} border border-${stat?.color}/20 rounded-xl p-4 hover:shadow-medical transition-all duration-200 h-full flex flex-col`}
           >
             <div className="flex items-center justify-between mb-3">
               <div className={`w-10 h-10 bg-${stat?.color}/20 rounded-lg flex items-center justify-center`}>
                 <Icon name={stat?.icon} size={20} color={`var(--color-${stat?.color})`} />
               </div>
-              <div className="text-right">
-                <div className={`text-2xl font-bold text-${stat?.color}`}>
+              <div className="text-right shrink-0 pl-2">
+                <div className={`text-2xl font-bold text-${stat?.color} leading-none`}>
                   {stat?.value}
                 </div>
               </div>
             </div>
-            <div>
+            <div className="mt-auto">
               <h4 className="font-medium text-foreground text-sm mb-1">
                 {stat?.label}
               </h4>
-              <p className={`text-xs ${getChangeColor(stat?.changeType)}`}>
+              <p className={`text-xs ${getChangeColor(stat?.changeType)} min-h-[2.5rem]`}>
                 {stat?.change}
               </p>
             </div>
