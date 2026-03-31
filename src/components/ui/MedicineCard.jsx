@@ -36,11 +36,11 @@ const MedicineCard = ({ medicine, onSelect, onViewDetails, className = '' }) => 
   return (
     <motion.div
       layout
-      className={`card-interactive bg-white dark:bg-slate-900 rounded-xl border border-border dark:border-slate-700 overflow-hidden ${className}`}
+      className={`card-interactive h-full bg-white dark:bg-slate-900 rounded-xl border border-border dark:border-slate-700 overflow-hidden ${className}`}
       whileHover={{ scale: 1.02, y: -4 }}
       transition={{ type: "spring", stiffness: 300 }}
     >
-      <div className="p-6">
+      <div className="p-6 h-full flex flex-col">
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
@@ -135,7 +135,7 @@ const MedicineCard = ({ medicine, onSelect, onViewDetails, className = '' }) => 
         )}
 
         {/* Actions */}
-        <div className="flex items-center justify-between mt-4 pt-3 border-t dark:border-gray-700">
+        <div className="flex items-center justify-between mt-auto pt-3 border-t dark:border-gray-700">
           <button
             onClick={() => setIsExpanded(!isExpanded)}
             className="flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium"
