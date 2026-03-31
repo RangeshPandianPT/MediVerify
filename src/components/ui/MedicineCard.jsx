@@ -36,55 +36,55 @@ const MedicineCard = ({ medicine, onSelect, onViewDetails, className = '' }) => 
   return (
     <motion.div
       layout
-      className={`bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow border dark:border-gray-700 ${className}`}
-      whileHover={{ scale: 1.02 }}
+      className={`card-interactive h-full bg-white dark:bg-slate-900 rounded-xl border border-border dark:border-slate-700 overflow-hidden ${className}`}
+      whileHover={{ scale: 1.02, y: -4 }}
       transition={{ type: "spring", stiffness: 300 }}
     >
-      <div className="p-4">
+      <div className="p-6 h-full flex flex-col">
         {/* Header */}
-        <div className="flex items-start justify-between mb-3">
+        <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+            <h3 className="text-lg font-bold text-foreground dark:text-white mb-1">
               {medicine.name}
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {medicine.genericName} • {medicine.dosage}
+            <p className="text-sm text-muted-foreground dark:text-slate-400">
+              {medicine.genericName} • <span className="font-semibold">{medicine.dosage}</span>
             </p>
           </div>
           {isExpiring() && (
-            <div className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 rounded-full text-xs">
-              <AlertTriangle className="w-3 h-3" />
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-100/80 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 rounded-full text-xs font-semibold whitespace-nowrap ml-3">
+              <AlertTriangle className="w-4 h-4" />
               <span>Expiring Soon</span>
             </div>
           )}
         </div>
 
         {/* Category and Form */}
-        <div className="flex items-center gap-2 mb-3">
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(medicine.category)}`}>
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${getCategoryColor(medicine.category)}`}>
             {medicine.category}
           </span>
-          <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-            <Package className="w-3 h-3" />
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground dark:text-slate-400 px-3 py-1.5 bg-muted dark:bg-slate-800 rounded-full font-medium">
+            <Package className="w-4 h-4" />
             {medicine.form}
           </span>
         </div>
 
         {/* Basic Info */}
-        <div className="space-y-2 text-sm">
+        <div className="space-y-3 text-sm border-t border-border dark:border-slate-700 pt-4">
           <div className="flex items-center justify-between">
-            <span className="text-gray-600 dark:text-gray-400">Manufacturer:</span>
-            <span className="font-medium text-gray-900 dark:text-white">{medicine.manufacturer}</span>
+            <span className="text-muted-foreground dark:text-slate-400 font-medium">Manufacturer</span>
+            <span className="font-semibold text-foreground dark:text-white">{medicine.manufacturer}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
-              Expiry:
+            <span className="text-muted-foreground dark:text-slate-400 flex items-center gap-1.5 font-medium">
+              <Calendar className="w-4 h-4" />
+              Expiry Date
             </span>
-            <span className={`font-medium ${
+            <span className={`font-semibold ${
               isExpiring() 
                 ? 'text-yellow-600 dark:text-yellow-400' 
-                : 'text-gray-900 dark:text-white'
+                : 'text-success dark:text-emerald-400'
             }`}>
               {new Date(medicine.expiryDate).toLocaleDateString()}
             </span>
@@ -135,7 +135,7 @@ const MedicineCard = ({ medicine, onSelect, onViewDetails, className = '' }) => 
         )}
 
         {/* Actions */}
-        <div className="flex items-center justify-between mt-4 pt-3 border-t dark:border-gray-700">
+        <div className="flex items-center justify-between mt-auto pt-3 border-t dark:border-gray-700">
           <button
             onClick={() => setIsExpanded(!isExpanded)}
             className="flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium"

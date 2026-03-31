@@ -11,6 +11,7 @@ import EmptyHistoryState from './components/EmptyHistoryState';
 
 import Button from '../../components/ui/Button';
 import { verificationStorage } from '../../utils/storage';
+import { getMedicineImageByName, resolveMedicineImage } from '../../utils/medicineImages';
 
 const VerificationHistory = () => {
   const navigate = useNavigate();
@@ -45,7 +46,7 @@ const VerificationHistory = () => {
       id: 1,
       verificationId: "MV-2024-001",
       medicineName: "Paracetamol 500mg",
-      medicineImage: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400",
+      medicineImage: getMedicineImageByName('Paracetamol 500mg'),
       verificationDate: "2024-10-09T10:30:00Z",
       credibilityPercentage: 98,
       isAuthentic: true,
@@ -64,7 +65,7 @@ const VerificationHistory = () => {
       id: 2,
       verificationId: "MV-2024-002",
       medicineName: "Amoxicillin 250mg",
-      medicineImage: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400",
+      medicineImage: getMedicineImageByName('Amoxicillin 250mg'),
       verificationDate: "2024-10-08T15:45:00Z",
       credibilityPercentage: 23,
       isAuthentic: false,
@@ -83,7 +84,7 @@ const VerificationHistory = () => {
       id: 3,
       verificationId: "MV-2024-003",
       medicineName: "Crocin Advance",
-      medicineImage: "https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=400",
+      medicineImage: getMedicineImageByName('Crocin Advance'),
       verificationDate: "2024-10-07T09:15:00Z",
       credibilityPercentage: 94,
       isAuthentic: true,
@@ -102,7 +103,7 @@ const VerificationHistory = () => {
       id: 4,
       verificationId: "MV-2024-004",
       medicineName: "Azithromycin 500mg",
-      medicineImage: "https://images.unsplash.com/photo-1550572017-edd951aa8ca6?w=400",
+      medicineImage: getMedicineImageByName('Azithromycin 500mg'),
       verificationDate: "2024-10-06T14:20:00Z",
       credibilityPercentage: 67,
       isAuthentic: null,
@@ -121,7 +122,7 @@ const VerificationHistory = () => {
       id: 5,
       verificationId: "MV-2024-005",
       medicineName: "Dolo 650mg",
-      medicineImage: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=400",
+      medicineImage: getMedicineImageByName('Dolo 650mg'),
       verificationDate: "2024-10-05T11:30:00Z",
       credibilityPercentage: 91,
       isAuthentic: true,
@@ -140,7 +141,7 @@ const VerificationHistory = () => {
       id: 6,
       verificationId: "MV-2024-006",
       medicineName: "Processing...",
-      medicineImage: "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=400",
+      medicineImage: getMedicineImageByName('Processing'),
       verificationDate: "2024-10-09T16:00:00Z",
       credibilityPercentage: 0,
       isAuthentic: null,
@@ -157,7 +158,7 @@ const VerificationHistory = () => {
     const normalizedHistory = persistedHistory.map((entry) => ({
       ...entry,
       verificationDate: entry?.verificationDate || entry?.timestamp || new Date().toISOString(),
-      medicineImage: entry?.medicineImage || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400',
+      medicineImage: resolveMedicineImage(entry?.medicineName, entry?.medicineImage),
       status: entry?.status || 'completed',
     }));
     setSavedVerifications(normalizedHistory);
@@ -426,7 +427,7 @@ const VerificationHistory = () => {
       <div className="content-offset">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Page Header */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-8">
             <div>
               <h1 className="text-3xl font-bold text-foreground mb-2">
                 Verification History
@@ -436,13 +437,13 @@ const VerificationHistory = () => {
               </p>
             </div>
             
-            <div className="flex items-center space-x-3">
+            <div className="flex w-full md:w-auto items-center gap-3">
               <Button
                 variant="outline"
                 onClick={() => setIsEmergencyModalOpen(true)}
                 iconName="AlertTriangle"
                 iconPosition="left"
-                className="text-error border-error hover:bg-error hover:text-error-foreground"
+                className="flex-1 md:flex-none text-error border-error hover:bg-error hover:text-error-foreground"
               >
                 Report Fake
               </Button>
@@ -451,6 +452,7 @@ const VerificationHistory = () => {
                 onClick={() => navigate('/medicine-verification')}
                 iconName="Camera"
                 iconPosition="left"
+                className="flex-1 md:flex-none"
               >
                 New Verification
               </Button>

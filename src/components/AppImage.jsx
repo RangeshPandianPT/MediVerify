@@ -6,6 +6,7 @@ function Image({
   className = "",
   ...props
 }) {
+  const fallbackSrc = "/assets/images/no_image.svg";
 
   return (
     <img
@@ -13,7 +14,10 @@ function Image({
       alt={alt}
       className={className}
       onError={(e) => {
-        e.target.src = "/assets/images/no_image.png"
+        if (e.currentTarget.src.includes(fallbackSrc)) {
+          return;
+        }
+        e.currentTarget.src = fallbackSrc;
       }}
       {...props}
     />

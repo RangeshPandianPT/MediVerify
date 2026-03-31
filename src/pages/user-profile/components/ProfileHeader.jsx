@@ -29,14 +29,14 @@ const ProfileHeader = ({ user, onUpdateProfile }) => {
   };
 
   return (
-    <div className="bg-card border border-border rounded-xl p-6 shadow-medical">
-      <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
+    <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-medical">
+      <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6">
         {/* Profile Picture */}
         <div className="relative">
-          <div className="w-24 h-24 bg-primary rounded-full flex items-center justify-center text-2xl font-bold text-primary-foreground">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center text-2xl font-bold text-primary-foreground shadow-subtle">
             {user?.name?.charAt(0) || 'U'}
           </div>
-          <button className="absolute -bottom-1 -right-1 w-8 h-8 bg-accent rounded-full flex items-center justify-center shadow-medical">
+          <button className="absolute -bottom-1 -right-1 w-8 h-8 bg-accent rounded-full flex items-center justify-center shadow-medical" aria-label="Update profile picture">
             <Icon name="Camera" size={16} color="var(--color-accent-foreground)" />
           </button>
         </div>
@@ -45,37 +45,40 @@ const ProfileHeader = ({ user, onUpdateProfile }) => {
         <div className="flex-1 w-full md:w-auto">
           {!isEditing ? (
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold text-foreground">{user?.name}</h1>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-foreground">{user?.name}</h2>
+                  <p className="text-muted-foreground text-sm sm:text-base">{user?.email}</p>
+                </div>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setIsEditing(true)}
                   iconName="Edit2"
                   iconPosition="left"
+                  className="w-full sm:w-auto"
                 >
                   Edit Profile
                 </Button>
               </div>
-              <p className="text-muted-foreground">{user?.email}</p>
               {user?.phone && (
-                <p className="text-muted-foreground flex items-center">
+                <p className="text-muted-foreground flex items-center text-sm sm:text-base">
                   <Icon name="Phone" size={16} className="mr-2" />
                   {user?.phone}
                 </p>
               )}
               {user?.location && (
-                <p className="text-muted-foreground flex items-center">
+                <p className="text-muted-foreground flex items-center text-sm sm:text-base">
                   <Icon name="MapPin" size={16} className="mr-2" />
                   {user?.location}
                 </p>
               )}
-              <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-3">
-                <span className="flex items-center">
+              <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-muted-foreground mt-3">
+                <span className="flex items-center bg-muted px-2.5 py-1 rounded-md">
                   <Icon name="Calendar" size={14} className="mr-1" />
                   Joined {new Date(user.joinDate)?.toLocaleDateString('en-IN')}
                 </span>
-                <span className="flex items-center">
+                <span className="flex items-center bg-success/10 text-success px-2.5 py-1 rounded-md">
                   <Icon name="Shield" size={14} className="mr-1" />
                   Verified Member
                 </span>
