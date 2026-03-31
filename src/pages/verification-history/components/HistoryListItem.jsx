@@ -86,7 +86,7 @@ const HistoryListItem = ({
         <div className="flex-shrink-0">
           <div className="w-16 h-16 bg-muted rounded-lg overflow-hidden">
             <Image
-              src={medicineImage || "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400"}
+              src={medicineImage || '/assets/images/no_image.svg'}
               alt={medicineName}
               className="w-full h-full object-cover"
             />
