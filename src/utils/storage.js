@@ -47,6 +47,10 @@ export const verificationStorage = {
     return storage.get('verificationHistory') || [];
   },
 
+  getPendingVerifications: () => {
+    return storage.get('verificationQueue') || [];
+  },
+
   addVerification: (verification) => {
     const history = verificationStorage.getHistory();
     const newVerification = {
@@ -62,6 +66,42 @@ export const verificationStorage = {
     }
     
     return storage.set('verificationHistory', history);
+  },
+
+  addPendingVerification: (verification) => {
+    const queue = verificationStorage.getPendingVerifications();
+    const queuedVerification = {
+      id: `queue-${Date.now()}-${Math.random()?.toString(36)?.slice(2, 8)}`,
+      status: 'pending',
+      queuedAt: new Date().toISOString(),
+      lastAttemptAt: null,
+      lastError: null,
+      ...verification
+    };
+
+    queue.unshift(queuedVerification);
+
+    if (queue.length > 50) {
+      queue.splice(50);
+    }
+
+    return storage.set('verificationQueue', queue);
+  },
+
+  updatePendingVerification: (id, updates) => {
+    const queue = verificationStorage.getPendingVerifications();
+    const updatedQueue = queue.map((item) => item.id === id ? { ...item, ...updates } : item);
+    return storage.set('verificationQueue', updatedQueue);
+  },
+
+  removePendingVerification: (id) => {
+    const queue = verificationStorage.getPendingVerifications();
+    const filtered = queue.filter((item) => item.id !== id);
+    return storage.set('verificationQueue', filtered);
+  },
+
+  clearPendingVerifications: () => {
+    return storage.remove('verificationQueue');
   },
 
   removeVerification: (id) => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import Icon from '../../components/AppIcon';
@@ -7,6 +7,9 @@ import Header from '../../components/ui/Header';
 import CameraInterface from './components/CameraInterface';
 import VerificationProcessor from './components/VerificationProcessor';
 import VerificationGuide from './components/VerificationGuide';
+import MedicineReferenceLookup from './components/MedicineReferenceLookup';
+import { useOffline } from '../../hooks/useOffline';
+import { buildOfflineQueueSummary, syncOfflineVerificationQueue } from '../../utils/verificationSync';
 
 const MedicineVerification = () => {
   const navigate = useNavigate();
@@ -14,6 +17,25 @@ const MedicineVerification = () => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [verificationResult, setVerificationResult] = useState(null);
   const [showGuide, setShowGuide] = useState(false);
+  const [referenceContext, setReferenceContext] = useState(null);
+  const [queueSummary, setQueueSummary] = useState(buildOfflineQueueSummary());
+  const [isSyncingQueue, setIsSyncingQueue] = useState(false);
+  const isOffline = useOffline();
+
+  useEffect(() => {
+    const refreshQueueSummary = () => {
+      setQueueSummary(buildOfflineQueueSummary());
+    };
+
+    window.addEventListener('mediverify:verificationQueueUpdated', refreshQueueSummary);
+    window.addEventListener('online', refreshQueueSummary);
+    refreshQueueSummary();
+
+    return () => {
+      window.removeEventListener('mediverify:verificationQueueUpdated', refreshQueueSummary);
+      window.removeEventListener('online', refreshQueueSummary);
+    };
+  }, []);
 
   // Mock user data
   const mockUser = {
@@ -43,6 +65,20 @@ const MedicineVerification = () => {
     setCurrentStep('capture');
     setSelectedImage(null);
     setVerificationResult(null);
+  };
+
+  const handleReferenceSelect = (medicine) => {
+    setReferenceContext(medicine || null);
+  };
+
+  const handleSyncQueuedVerifications = async () => {
+    setIsSyncingQueue(true);
+    try {
+      await syncOfflineVerificationQueue();
+    } finally {
+      setQueueSummary(buildOfflineQueueSummary());
+      setIsSyncingQueue(false);
+    }
   };
 
   const handleSaveToHistory = () => {
@@ -140,6 +176,12 @@ const MedicineVerification = () => {
                         </Button>
                       </div>
 
+                      <MedicineReferenceLookup
+                        selectedMedicine={referenceContext}
+                        onSelect={handleReferenceSelect}
+                        className="mb-6"
+                      />
+
                       <CameraInterface
                         onCapture={handleImageCapture}
                         onImageUpload={handleImageUpload}
@@ -161,6 +203,35 @@ const MedicineVerification = () => {
                           <div className="text-xs text-muted-foreground">Available</div>
                         </div>
                       </div>
+
+                      <div className={`mt-6 rounded-xl border p-4 ${isOffline ? 'border-warning/20 bg-warning/5' : queueSummary?.total > 0 ? 'border-primary/20 bg-primary/5' : 'border-border bg-muted/20'}`}>
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <Icon name={isOffline ? 'WifiOff' : 'RefreshCcw'} size={16} color={isOffline ? 'var(--color-warning)' : 'var(--color-primary)'} />
+                              <h3 className="font-semibold text-foreground">Offline verification queue</h3>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {queueSummary?.total > 0
+                                ? `${queueSummary.total} verification${queueSummary.total === 1 ? '' : 's'} waiting to sync.`
+                                : isOffline
+                                ? 'You are offline. Any failed submission will be saved locally and retried later.'
+                                : 'No queued verifications. Failed submissions will be saved automatically if the connection drops.'}
+                            </p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleSyncQueuedVerifications}
+                            loading={isSyncingQueue}
+                            disabled={isOffline && queueSummary?.total === 0}
+                            iconName="RefreshCw"
+                            iconPosition="left"
+                          >
+                            Sync now
+                          </Button>
+                        </div>
+                      </div>
                     </>
                   )}
 
@@ -169,6 +240,8 @@ const MedicineVerification = () => {
                       imageFile={selectedImage}
                       onComplete={handleVerificationComplete}
                       onReset={handleReset}
+                      onQueueChange={setQueueSummary}
+                      referenceContext={referenceContext}
                     />
                   )}
 
@@ -177,6 +250,8 @@ const MedicineVerification = () => {
                       imageFile={selectedImage}
                       onComplete={handleVerificationComplete}
                       onReset={handleReset}
+                      onQueueChange={setQueueSummary}
+                      referenceContext={referenceContext}
                     />
                   )}
                 </div>

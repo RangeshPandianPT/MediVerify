@@ -3,6 +3,7 @@ import Routes from "./Routes";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { ToastProvider } from "./components/ui/Toast";
 import OfflineIndicator from "./components/ui/OfflineIndicator";
+import OfflineVerificationSync from "./components/ui/OfflineVerificationSync";
 
 function App() {
   return (
@@ -10,6 +11,7 @@ function App() {
       <ToastProvider>
         <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors">
           <OfflineIndicator />
+          <OfflineVerificationSync />
           <Routes />
         </div>
       </ToastProvider>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import EmergencyReportingModal from '../../../components/ui/EmergencyReportingModal';
+import { downloadVerificationCsv, downloadVerificationPdf } from '../../../utils/verificationReports';
 
 const ActionButtonsPanel = ({ 
   verificationData = {},
@@ -20,30 +21,25 @@ const ActionButtonsPanel = ({
   const handleDownloadReport = async () => {
     setIsDownloading(true);
     try {
-      // Simulate download process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const opened = downloadVerificationPdf(verificationData);
+      if (!opened) {
+        throw new Error('Popup blocked while opening the report preview.');
+      }
       onDownloadReport?.(verificationData);
-      
-      // Create mock download
-      const reportData = {
-        verificationId,
-        medicineName,
-        result: isAuthentic ? 'Authentic' : 'Fake Detected',
-        timestamp: new Date()?.toISOString(),
-        confidence: verificationData?.credibilityPercentage || 0
-      };
-      
-      const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `MediVerify_Report_${verificationId}.json`;
-      document.body?.appendChild(a);
-      a?.click();
-      document.body?.removeChild(a);
-      URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Download failed:', error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleDownloadCsv = async () => {
+    setIsDownloading(true);
+    try {
+      downloadVerificationCsv(verificationData);
+      onDownloadReport?.(verificationData);
+    } catch (error) {
+      console.error('CSV download failed:', error);
     } finally {
       setIsDownloading(false);
     }
@@ -83,12 +79,20 @@ const ActionButtonsPanel = ({
 
   const primaryActions = [
     {
-      label: 'Download Report',
+      label: 'Download PDF',
       icon: 'Download',
       variant: 'default',
       onClick: handleDownloadReport,
       loading: isDownloading,
-      description: 'Save detailed verification report'
+      description: 'Save a print-ready verification report'
+    },
+    {
+      label: 'Download CSV',
+      icon: 'Table',
+      variant: 'outline',
+      onClick: handleDownloadCsv,
+      loading: isDownloading,
+      description: 'Export report data for spreadsheets'
     },
     {
       label: 'Share Results',
@@ -135,7 +139,7 @@ const ActionButtonsPanel = ({
             Quick Actions
           </h3>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {primaryActions?.map((action, index) => (
               <div key={index} className="space-y-2">
                 <Button

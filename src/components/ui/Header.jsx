@@ -3,13 +3,18 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Icon from '../AppIcon';
 import Button from './Button';
 import DarkModeToggle from './DarkModeToggle';
-import { signOutUser } from '../../utils/firebaseAuth';
+import { useToast } from './Toast';
+import { signOutUser, subscribeToAuthState } from '../../utils/firebaseAuth';
 
 const Header = ({ user, verificationCount = 0, hasUnreadResults = false, title }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isSignOutConfirmOpen, setIsSignOutConfirmOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [authIdentity, setAuthIdentity] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const { addToast } = useToast();
   const userMenuRef = useRef(null);
 
   const navigationItems = [
@@ -58,6 +63,7 @@ const Header = ({ user, verificationCount = 0, hasUnreadResults = false, title }
 
   useEffect(() => {
     setIsUserMenuOpen(false);
+    setIsSignOutConfirmOpen(false);
   }, [location?.pathname]);
 
   useEffect(() => {
@@ -71,38 +77,112 @@ const Header = ({ user, verificationCount = 0, hasUnreadResults = false, title }
       }
     };
 
-    const handleEscape = (event) => {
-      if (event.key === 'Escape') {
-        setIsUserMenuOpen(false);
-      }
-    };
-
     document.addEventListener('mousedown', handleDocumentClick);
-    document.addEventListener('keydown', handleEscape);
 
     return () => {
       document.removeEventListener('mousedown', handleDocumentClick);
-      document.removeEventListener('keydown', handleEscape);
     };
   }, [isUserMenuOpen]);
+
+  useEffect(() => {
+    if (!isUserMenuOpen && !isSignOutConfirmOpen) {
+      return undefined;
+    }
+
+    const handleEscape = (event) => {
+      if (event.key !== 'Escape') {
+        return;
+      }
+
+      if (isSignOutConfirmOpen) {
+        if (!isSigningOut) {
+          setIsSignOutConfirmOpen(false);
+        }
+        return;
+      }
+
+      setIsUserMenuOpen(false);
+    };
+
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isUserMenuOpen, isSignOutConfirmOpen, isSigningOut]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToAuthState((firebaseUser) => {
+      if (!firebaseUser) {
+        setAuthIdentity(null);
+        return;
+      }
+
+      setAuthIdentity({
+        name: firebaseUser?.displayName || '',
+        email: firebaseUser?.email || '',
+        photoURL: firebaseUser?.photoURL || ''
+      });
+    });
+
+    return unsubscribe;
+  }, []);
+
+  const getStoredSessionUser = () => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || '{}');
+    } catch {
+      return {};
+    }
+  };
+
+  const sessionUser = getStoredSessionUser();
+  const activeUser = {
+    ...user,
+    name: authIdentity?.name || user?.name || sessionUser?.name || 'User',
+    email: authIdentity?.email || user?.email || sessionUser?.email || ''
+  };
 
   const handleOpenProfile = () => {
     setIsUserMenuOpen(false);
     handleNavigate('/user-profile');
   };
 
-  const handleSignOut = async () => {
+  const handleRequestSignOut = () => {
+    setIsUserMenuOpen(false);
+    setIsMobileMenuOpen(false);
+    setIsSignOutConfirmOpen(true);
+  };
+
+  const handleConfirmSignOut = async () => {
+    if (isSigningOut) {
+      return;
+    }
+
+    setIsSigningOut(true);
+    let signOutError = null;
+
     try {
       await signOutUser();
     } catch (error) {
+      signOutError = error;
       // Continue with local session cleanup even if Firebase sign-out is unavailable.
       console.warn('Sign-out fallback activated:', error?.message || error);
     }
 
     localStorage.removeItem('mediverify_user');
     sessionStorage.removeItem('mediverify_user');
+    setIsSignOutConfirmOpen(false);
     setIsUserMenuOpen(false);
     setIsMobileMenuOpen(false);
+    setIsSigningOut(false);
+
+    if (signOutError) {
+      addToast('Signed out locally. Please close other active sessions if needed.', 'info');
+    } else {
+      addToast('Signed out successfully.', 'success');
+    }
+
     navigate('/login', { replace: true });
   };
 
@@ -163,7 +243,7 @@ const Header = ({ user, verificationCount = 0, hasUnreadResults = false, title }
               )}
 
               {/* User Avatar Dropdown */}
-              {user && (
+              {activeUser && (
                 <div className="relative hidden md:block" ref={userMenuRef}>
                   <button
                     type="button"
@@ -175,10 +255,10 @@ const Header = ({ user, verificationCount = 0, hasUnreadResults = false, title }
                   >
                     <div className="w-9 h-9 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center shadow-subtle">
                       <span className="text-sm font-bold text-primary-foreground">
-                        {user?.name?.charAt(0) || 'U'}
+                        {activeUser?.name?.charAt(0) || 'U'}
                       </span>
                     </div>
-                    <span className="text-sm font-semibold text-foreground">{user?.name}</span>
+                    <span className="text-sm font-semibold text-foreground">{activeUser?.name}</span>
                     <Icon
                       name={isUserMenuOpen ? 'ChevronUp' : 'ChevronDown'}
                       size={16}
@@ -192,9 +272,9 @@ const Header = ({ user, verificationCount = 0, hasUnreadResults = false, title }
                       className="absolute right-0 top-full mt-2 w-60 bg-popover border border-border rounded-xl shadow-medical-lg p-2 z-[260]"
                     >
                       <div className="px-3 py-2 border-b border-border mb-2">
-                        <p className="text-sm font-semibold text-foreground truncate">{user?.name || 'User'}</p>
-                        {user?.email && (
-                          <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                        <p className="text-sm font-semibold text-foreground truncate">{activeUser?.name || 'User'}</p>
+                        {activeUser?.email && (
+                          <p className="text-xs text-muted-foreground truncate">{activeUser?.email}</p>
                         )}
                       </div>
 
@@ -211,7 +291,7 @@ const Header = ({ user, verificationCount = 0, hasUnreadResults = false, title }
                       <button
                         type="button"
                         role="menuitem"
-                        onClick={handleSignOut}
+                        onClick={handleRequestSignOut}
                         className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg text-sm text-error hover:bg-error/10 transition-colors"
                       >
                         <Icon name="LogOut" size={16} />
@@ -271,15 +351,18 @@ const Header = ({ user, verificationCount = 0, hasUnreadResults = false, title }
             </div>
 
             {/* User Info */}
-            {user && (
+            {activeUser && (
               <div className="flex items-center space-x-3 p-4 bg-muted rounded-lg mb-6">
                 <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
                   <span className="text-base font-semibold text-primary-foreground">
-                    {user?.name?.charAt(0) || 'U'}
+                    {activeUser?.name?.charAt(0) || 'U'}
                   </span>
                 </div>
                 <div>
-                  <div className="font-medium text-foreground">{user?.name}</div>
+                  <div className="font-medium text-foreground">{activeUser?.name}</div>
+                  {activeUser?.email && (
+                    <div className="text-xs text-muted-foreground truncate max-w-[180px]">{activeUser?.email}</div>
+                  )}
                   {verificationCount > 0 && (
                     <div className="flex items-center space-x-1 text-sm text-muted-foreground">
                       <Icon name="CheckCircle" size={12} color="var(--color-success)" />
@@ -335,7 +418,7 @@ const Header = ({ user, verificationCount = 0, hasUnreadResults = false, title }
                   className="w-full border-error text-error hover:bg-error hover:text-error-foreground"
                   iconName="LogOut"
                   iconPosition="left"
-                  onClick={handleSignOut}
+                  onClick={handleRequestSignOut}
                 >
                   Sign Out
                 </Button>
@@ -364,6 +447,55 @@ const Header = ({ user, verificationCount = 0, hasUnreadResults = false, title }
           </div>
         </div>
       </div>
+
+      {isSignOutConfirmOpen && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="signout-title">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/60"
+            aria-label="Close sign-out confirmation"
+            disabled={isSigningOut}
+            onClick={() => {
+              if (!isSigningOut) {
+                setIsSignOutConfirmOpen(false);
+              }
+            }}
+          />
+
+          <div className="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-medical-xl">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-warning/20 text-warning">
+                <Icon name="LogOut" size={18} />
+              </div>
+              <div>
+                <h3 id="signout-title" className="text-lg font-semibold text-foreground">Sign out now?</h3>
+                <p className="text-sm text-muted-foreground">You will need to log in again to access protected pages.</p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setIsSignOutConfirmOpen(false)}
+                disabled={isSigningOut}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                iconName="LogOut"
+                iconPosition="left"
+                loading={isSigningOut}
+                disabled={isSigningOut}
+                onClick={handleConfirmSignOut}
+              >
+                Sign Out
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Floating Verify Button (Mobile) */}
       {!isActive('/medicine-verification') && (
         <button
