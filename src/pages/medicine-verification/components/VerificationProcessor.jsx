@@ -3,11 +3,16 @@ import Icon from '../../../components/AppIcon';
 import VerificationStatusIndicator from '../../../components/ui/VerificationStatusIndicator';
 import { verifyMedicine } from '../../../utils/api';
 import { verificationStorage } from '../../../utils/storage';
+import { getScanQualityGuidance } from '../../../utils/verificationInsights';
+import { queueOfflineVerification } from '../../../utils/verificationSync';
+import { buildOfflineQueueSummary } from '../../../utils/verificationSync';
 
 const VerificationProcessor = ({ 
   imageFile, 
   onComplete, 
   onReset,
+  onQueueChange,
+  referenceContext = null,
   className = '' 
 }) => {
   const [processingStage, setProcessingStage] = useState('analyzing');
@@ -16,6 +21,7 @@ const VerificationProcessor = ({
   const [error, setError] = useState(null);
   const [savedToHistory, setSavedToHistory] = useState(false);
   const [feedbackChoice, setFeedbackChoice] = useState(null);
+  const [queuedForSync, setQueuedForSync] = useState(false);
 
   const processingStages = [
     { id: 'analyzing', label: 'Analyzing Image', duration: 800 },
@@ -36,6 +42,7 @@ const VerificationProcessor = ({
       try {
         setSavedToHistory(false);
         setFeedbackChoice(null);
+        setQueuedForSync(false);
 
         // Start progress animation while API processes
         const animateProgress = () => {
@@ -67,12 +74,39 @@ const VerificationProcessor = ({
         // Complete the progress
         setProgress(100);
         setProcessingStage('complete');
-        setResult(apiResult);
-        onComplete?.(apiResult);
+        const enrichedResult = {
+          ...apiResult,
+          referenceContext,
+        };
+
+        setResult(enrichedResult);
+        onComplete?.(enrichedResult);
 
       } catch (err) {
         if (isCancelled) return;
         console.error('Verification error:', err);
+
+        const looksOffline = !navigator.onLine || String(err?.message || '').toLowerCase().includes('fetch') || String(err?.message || '').toLowerCase().includes('backend');
+
+        if (looksOffline) {
+          try {
+            await queueOfflineVerification({
+              imageFile,
+              reason: err?.message || 'Verification server unreachable',
+              referenceContext,
+            });
+
+            if (isCancelled) return;
+
+            setQueuedForSync(true);
+            onQueueChange?.(buildOfflineQueueSummary());
+            setError('Verification queued for offline sync. We will retry automatically when you are back online.');
+            return;
+          } catch (queueError) {
+            console.error('Failed to queue offline verification:', queueError);
+          }
+        }
+
         setError(err.message || 'Verification failed. Please try again.');
       }
     };
@@ -105,14 +139,14 @@ const VerificationProcessor = ({
 
     const historyRecord = {
       verificationId: result?.id,
-      medicineName: result?.medicineDetails?.name || 'Unknown Medicine',
+      medicineName: result?.medicineDetails?.name || referenceContext?.name || 'Unknown Medicine',
       verificationDate: result?.timestamp,
       credibilityPercentage: result?.credibilityPercentage,
       isAuthentic: result?.isAuthentic,
       status: 'completed',
-      batchNumber: result?.medicineDetails?.batchNumber,
-      manufacturer: result?.medicineDetails?.manufacturer,
-      expiryDate: result?.medicineDetails?.expDate,
+      batchNumber: result?.medicineDetails?.batchNumber || referenceContext?.batchNumber,
+      manufacturer: result?.medicineDetails?.manufacturer || referenceContext?.manufacturer,
+      expiryDate: result?.medicineDetails?.expDate || referenceContext?.expiryDate,
       analysisDetails: {
         processingTime: result?.processingTime,
         confidenceBand: result?.confidenceBand,
@@ -143,6 +177,8 @@ const VerificationProcessor = ({
     }
   };
 
+  const scanQualityGuidance = getScanQualityGuidance(result);
+
   // Error state
   if (error) {
     return (
@@ -152,6 +188,11 @@ const VerificationProcessor = ({
         </div>
         <h2 className="text-2xl font-bold text-error mb-2">Verification Failed</h2>
         <p className="text-muted-foreground mb-6">{error}</p>
+        {queuedForSync && (
+          <div className="mb-6 rounded-lg border border-warning/20 bg-warning/5 px-4 py-3 text-sm text-warning">
+            Your scan was saved to the offline queue and will retry automatically when the connection is restored.
+          </div>
+        )}
         <button
           onClick={onReset}
           className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors focus-medical"
@@ -165,6 +206,10 @@ const VerificationProcessor = ({
   if (result) {
     const isAuthentic = result?.isAuthentic === true;
     const isFake = result?.isAuthentic === false && result?.status !== 'suspicious';
+    const medicineName = result?.medicineDetails?.name || referenceContext?.name || 'Unknown Medicine';
+    const manufacturer = result?.medicineDetails?.manufacturer || referenceContext?.manufacturer || 'N/A';
+    const batchNumber = result?.medicineDetails?.batchNumber || referenceContext?.batchNumber || 'N/A';
+    const mrp = result?.medicineDetails?.mrp || referenceContext?.mrp || 'N/A';
 
     return (
       <div className={`${className}`}>
@@ -243,6 +288,31 @@ const VerificationProcessor = ({
             </p>
           )}
         </div>
+
+        {/* Scan Quality Advisory */}
+        {scanQualityGuidance && (
+          <div className={`mb-6 rounded-xl border p-4 ${scanQualityGuidance?.variant === 'success' ? 'border-success/20 bg-success/5' : scanQualityGuidance?.variant === 'error' ? 'border-error/20 bg-error/5' : 'border-warning/20 bg-warning/5'}`}>
+            <div className="flex items-start gap-3">
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${scanQualityGuidance?.variant === 'success' ? 'bg-success/15' : scanQualityGuidance?.variant === 'error' ? 'bg-error/15' : 'bg-warning/15'}`}>
+                <Icon name={scanQualityGuidance?.variant === 'success' ? 'CheckCircle' : 'AlertTriangle'} size={16} color={scanQualityGuidance?.variant === 'success' ? 'var(--color-success)' : scanQualityGuidance?.variant === 'error' ? 'var(--color-error)' : 'var(--color-warning)'} />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-foreground mb-1">{scanQualityGuidance?.title}</h4>
+                <p className="text-sm text-muted-foreground">{scanQualityGuidance?.description}</p>
+                {scanQualityGuidance?.tips?.length > 0 && (
+                  <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+                    {scanQualityGuidance.tips.map((tip) => (
+                      <li key={tip} className="flex items-start gap-2">
+                        <span className="mt-1 inline-block h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+                        <span>{tip}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         {/* Medicine Details */}
         <div className="bg-card border border-border rounded-xl p-6 mb-6">
           <h3 className="font-semibold text-foreground mb-4 flex items-center">
@@ -252,19 +322,19 @@ const VerificationProcessor = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Name</p>
-              <p className="font-medium">{result?.medicineDetails?.name}</p>
+              <p className="font-medium">{medicineName}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Manufacturer</p>
-              <p className="font-medium">{result?.medicineDetails?.manufacturer}</p>
+              <p className="font-medium">{manufacturer}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Batch Number</p>
-              <p className="font-mono text-sm">{result?.medicineDetails?.batchNumber}</p>
+              <p className="font-mono text-sm">{batchNumber}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">MRP</p>
-              <p className="font-medium">{result?.medicineDetails?.mrp}</p>
+              <p className="font-medium">{mrp}</p>
             </div>
           </div>
         </div>

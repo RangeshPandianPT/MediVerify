@@ -10,6 +10,11 @@ This document lists features that can be added to improve MediVerify from protot
 - Action recommendation text in verification response
 - Save verification result to local history
 - User feedback capture (`helpful` / `needs review`)
+- Explainable verification result panel with supporting and concerning signals
+- Scan-quality advisory with retake guidance for low-quality captures
+- Medicine reference autocomplete for manufacturer and batch lookup
+- PDF and CSV verification report export
+- Offline queue with automatic retry when the connection returns
 
 ## Priority 0 (Critical for Production)
 

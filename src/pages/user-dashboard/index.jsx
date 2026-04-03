@@ -7,23 +7,47 @@ import StatisticsPanel from './components/StatisticsPanel';
 import QuickAccessTiles from './components/QuickAccessTiles';
 import EducationalHighlights from './components/EducationalHighlights';
 import NewsAndAlerts from './components/NewsAndAlerts';
+import { subscribeToAuthState } from '../../utils/firebaseAuth';
 
 const UserDashboard = () => {
   const [user, setUser] = useState(null);
 
-  // Mock user data - in real app this would come from authentication context
   useEffect(() => {
-    const mockUser = {
-      id: 'user_123',
-  name: 'RANGESH',
-      email: 'priya.sharma@email.com',
-      phone: '+91 98765 43210',
-      location: 'Mumbai, Maharashtra',
-      joinedDate: '2024-03-15',
-      verificationCount: 47,
-      trustScore: 94
+    const parseStoredUser = () => {
+      try {
+        return JSON.parse(localStorage.getItem('user') || '{}');
+      } catch {
+        return {};
+      }
     };
-    setUser(mockUser);
+
+    const storedUser = parseStoredUser();
+    setUser((prev) => ({
+      ...prev,
+      ...storedUser,
+      verificationCount: prev?.verificationCount ?? 47,
+      trustScore: prev?.trustScore ?? 94
+    }));
+
+    const unsubscribe = subscribeToAuthState((firebaseUser) => {
+      if (!firebaseUser) {
+        return;
+      }
+
+      const latestStoredUser = parseStoredUser();
+      setUser({
+        id: firebaseUser?.uid || latestStoredUser?.uid || 'user_123',
+        name: firebaseUser?.displayName || latestStoredUser?.name || 'MediVerify User',
+        email: firebaseUser?.email || latestStoredUser?.email || '',
+        phone: latestStoredUser?.phone || '+91 98765 43210',
+        location: latestStoredUser?.location || 'Mumbai, Maharashtra',
+        joinedDate: firebaseUser?.metadata?.creationTime || latestStoredUser?.joinedDate || '2024-03-15',
+        verificationCount: latestStoredUser?.verificationCount || 47,
+        trustScore: latestStoredUser?.trustScore || 94
+      });
+    });
+
+    return unsubscribe;
   }, []);
 
   return (
