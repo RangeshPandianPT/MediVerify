@@ -3,12 +3,14 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import Header from '../../components/ui/Header';
 import ResultStatusCard from './components/ResultStatusCard';
+import VerificationInsightsPanel from './components/VerificationInsightsPanel';
 import AnalysisBreakdown from './components/AnalysisBreakdown';
 import VerificationMetadata from './components/VerificationMetadata';
 import ActionButtonsPanel from './components/ActionButtonsPanel';
 import EducationalContent from './components/EducationalContent';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
+import { downloadVerificationPdf } from '../../utils/verificationReports';
 
 const VerificationResults = () => {
   const location = useLocation();
@@ -64,7 +66,7 @@ const VerificationResults = () => {
   }, [location?.state]);
 
   const handleDownloadReport = (data) => {
-    console.log('Downloading report for:', data?.verificationId);
+    downloadVerificationPdf(data || verificationData);
   };
 
   const handleShareResults = (data) => {
@@ -163,6 +165,8 @@ const VerificationResults = () => {
                   result={verificationData}
                   animated={true}
                 />
+
+                <VerificationInsightsPanel verificationData={verificationData} />
 
                 {/* Analysis Breakdown */}
                 <div>
