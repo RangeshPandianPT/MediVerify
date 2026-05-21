@@ -5,11 +5,14 @@ POST /api/verify - Upload medicine image for authenticity verification
 """
 
 import time
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Request, Depends
 from fastapi.responses import JSONResponse
+from loguru import logger
 
 from app.schemas.verification import VerificationResult, ErrorResponse
 from app.model.preprocessing import validate_image
+from app.core.auth import get_current_user
+from app.core.rate_limit import limiter
 
 
 router = APIRouter(tags=["verification"])
@@ -27,11 +30,16 @@ ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp", "image/jpg"}
     response_model=VerificationResult,
     responses={
         400: {"model": ErrorResponse, "description": "Invalid image"},
+        401: {"model": ErrorResponse, "description": "Unauthorized"},
+        429: {"model": ErrorResponse, "description": "Too many requests"},
         500: {"model": ErrorResponse, "description": "Verification failed"}
     }
 )
+@limiter.limit("5/minute")
 async def verify_medicine(
-    image: UploadFile = File(..., description="Medicine image to verify")
+    request: Request,
+    image: UploadFile = File(..., description="Medicine image to verify"),
+    user: dict = Depends(get_current_user)
 ):
     """
     Verify medicine authenticity from uploaded image.
@@ -74,12 +82,18 @@ async def verify_medicine(
     # Get verifier and run prediction
     verifier = get_verifier()
     if verifier is None:
+        logger.error("Model not loaded during request")
         raise HTTPException(status_code=500, detail="Model not loaded. Please try again later.")
     
     try:
+        start_time = time.time()
+        logger.info(f"User {user.get('uid')} is verifying an image of size {len(image_bytes)} bytes")
         result = verifier.predict(image_bytes)
+        latency = (time.time() - start_time) * 1000
+        logger.info(f"Verification successful for User {user.get('uid')}. Latency: {latency:.2f}ms. Result: {result.get('status') if isinstance(result, dict) else 'success'}")
         return result
     except Exception as e:
+        logger.error(f"Verification failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Verification failed: {str(e)}")
 
 

@@ -4,12 +4,27 @@ MediVerify FastAPI Backend
 High-performance API for medicine authenticity verification using EfficientNetB0.
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
+from loguru import logger
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.routes import verify
 from app.model.predictor import MedicineVerifier
+from app.core.rate_limit import limiter
+
+class SecureHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        return response
 
 # Global model instance
 verifier = None
@@ -19,11 +34,14 @@ verifier = None
 async def lifespan(app: FastAPI):
     """Load model on startup, cleanup on shutdown."""
     global verifier
-    print("🔄 Loading EfficientNetB0 model...")
-    verifier = MedicineVerifier()
-    print("✅ Model loaded successfully!")
+    logger.info("🔄 Loading EfficientNetB0 model...")
+    try:
+        verifier = MedicineVerifier()
+        logger.info("✅ Model loaded successfully!")
+    except Exception as e:
+        logger.error(f"Failed to load model: {e}")
     yield
-    print("🛑 Shutting down...")
+    logger.info("🛑 Shutting down...")
 
 
 app = FastAPI(
@@ -33,7 +51,11 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS configuration for frontend (allow all origins in development)
+# Add rate limiter state
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# CORS configuration for frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allow all origins for development
@@ -41,6 +63,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Secure headers middleware
+app.add_middleware(SecureHeadersMiddleware)
 
 # Include routes
 app.include_router(verify.router, prefix="/api")
