@@ -17,3 +17,11 @@ opencv-python>=4.8.0
 
 # CORS and utilities
 starlette>=0.27.0
+
+# Security and Auth
+firebase-admin>=6.2.0
+slowapi>=0.1.8
+filetype>=1.2.0
+
+# Observability
+loguru>=0.7.2
