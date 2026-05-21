@@ -3,6 +3,8 @@
  * Handles communication with the FastAPI backend
  */
 
+import { getAuthToken } from './firebaseAuth';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 /**
@@ -15,8 +17,15 @@ export async function verifyMedicine(imageFile) {
   formData.append('image', imageFile);
 
   try {
+    const token = await getAuthToken();
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/verify`, {
       method: 'POST',
+      headers,
       body: formData,
     });
 

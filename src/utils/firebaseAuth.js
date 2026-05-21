@@ -85,6 +85,15 @@ export const signOutUser = async () => {
   await signOut(auth);
 };
 
+export const getAuthToken = async () => {
+  if (!isFirebaseConfigured) return null;
+  const auth = getFirebaseAuth();
+  if (auth.currentUser) {
+    return await auth.currentUser.getIdToken();
+  }
+  return null;
+};
+
 export const getFirebaseErrorMessage = (error) => {
   const errorCode = error?.code || '';
 
