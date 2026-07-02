@@ -13,9 +13,56 @@ const CameraInterface = ({
   const [flashEnabled, setFlashEnabled] = useState(false);
   const [stream, setStream] = useState(null);
   const [error, setError] = useState(null);
+  const [imageQualityWarning, setImageQualityWarning] = useState(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const analysisCanvasRef = useRef(null);
   const fileInputRef = useRef(null);
+  const analysisTimeoutRef = useRef(null);
+
+  const analyzeFrame = () => {
+    if (!videoRef.current || !analysisCanvasRef.current) return;
+    
+    const video = videoRef.current;
+    const canvas = analysisCanvasRef.current;
+    
+    if (video.videoWidth > 0 && video.videoHeight > 0) {
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      canvas.width = 64;
+      canvas.height = 64;
+      ctx.drawImage(video, 0, 0, 64, 64);
+      
+      try {
+        const imageData = ctx.getImageData(0, 0, 64, 64);
+        const data = imageData.data;
+        let totalBrightness = 0;
+        let samples = 0;
+        
+        for (let i = 0; i < data.length; i += 16) {
+          const brightness = (data[i] + data[i+1] + data[i+2]) / 3;
+          totalBrightness += brightness;
+          samples++;
+        }
+        
+        const avgBrightness = totalBrightness / samples;
+        
+        if (avgBrightness < 50) {
+          setImageQualityWarning('Too Dark - Move to better light');
+        } else if (avgBrightness > 220) {
+          setImageQualityWarning('Too Bright - Avoid glare');
+        } else {
+          setImageQualityWarning(null);
+        }
+      } catch(e) {
+        // Ignore cross-origin canvas errors if any
+      }
+    }
+    
+    analysisTimeoutRef.current = setTimeout(() => {
+      requestAnimationFrame(analyzeFrame);
+    }, 500);
+  };
+
 
   const startCamera = async () => {
     const tryGetUserMedia = async (constraints) => {
@@ -85,8 +132,9 @@ const CameraInterface = ({
       if (videoRef?.current) {
         try {
           videoRef.current.srcObject = mediaStream;
-          // Some browsers require an explicit play() call
           await videoRef.current.play();
+          // Start real-time analysis once playing
+          requestAnimationFrame(analyzeFrame);
         } catch (playErr) {
           console.warn('Video play() failed (may require user interaction):', playErr);
         }
@@ -111,11 +159,15 @@ const CameraInterface = ({
   };
 
   const stopCamera = () => {
+    if (analysisTimeoutRef.current) {
+      clearTimeout(analysisTimeoutRef.current);
+    }
     if (stream) {
       stream?.getTracks()?.forEach(track => track?.stop());
       setStream(null);
     }
     setIsCameraActive(false);
+    setImageQualityWarning(null);
   };
 
   const capturePhoto = () => {
@@ -139,7 +191,40 @@ const CameraInterface = ({
   const handleFileUpload = (event) => {
     const file = event?.target?.files?.[0];
     if (file && file?.type?.startsWith('image/')) {
-      onImageUpload?.(file);
+      // Compress the uploaded image
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const MAX_DIM = 1920;
+          
+          if (width > height && width > MAX_DIM) {
+            height *= MAX_DIM / width;
+            width = MAX_DIM;
+          } else if (height > MAX_DIM) {
+            width *= MAX_DIM / height;
+            height = MAX_DIM;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          canvas.toBlob((blob) => {
+            const compressedFile = new File([blob], file.name || `upload-${Date.now()}.jpg`, { 
+              type: 'image/jpeg', 
+              lastModified: Date.now() 
+            });
+            onImageUpload?.(compressedFile);
+          }, 'image/jpeg', 0.8); // 80% quality for good balance of size/quality
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -169,17 +254,27 @@ const CameraInterface = ({
             />
             
             {/* Camera Guidelines */}
-            <div className="absolute inset-0 pointer-events-none">
-              <div className="absolute inset-4 border-2 border-white/50 rounded-lg">
-                <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-accent rounded-tl-lg"></div>
-                <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-accent rounded-tr-lg"></div>
-                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-accent rounded-bl-lg"></div>
-                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-accent rounded-br-lg"></div>
-              </div>
+            <div className="absolute inset-0 pointer-events-none flex flex-col justify-between">
+              {/* Top Warning Banner */}
+              {imageQualityWarning && (
+                <div className="bg-black/60 backdrop-blur-sm p-3 flex items-center justify-center space-x-2 w-full absolute top-0 z-10 transition-all duration-300">
+                  <Icon name="AlertTriangle" size={20} color="var(--color-warning)" />
+                  <span className="text-warning font-medium text-sm">{imageQualityWarning}</span>
+                </div>
+              )}
               
-              {/* Center Focus Indicator */}
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                <div className="w-8 h-8 border-2 border-accent rounded-full animate-pulse"></div>
+              <div className={`absolute inset-6 border-2 rounded-lg transition-colors duration-300 ${imageQualityWarning ? 'border-warning/50' : 'border-white/40'}`}>
+                {/* Corner indicators */}
+                <div className={`absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 rounded-tl-lg transition-colors duration-300 ${imageQualityWarning ? 'border-warning' : 'border-accent'}`}></div>
+                <div className={`absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 rounded-tr-lg transition-colors duration-300 ${imageQualityWarning ? 'border-warning' : 'border-accent'}`}></div>
+                <div className={`absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 rounded-bl-lg transition-colors duration-300 ${imageQualityWarning ? 'border-warning' : 'border-accent'}`}></div>
+                <div className={`absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 rounded-br-lg transition-colors duration-300 ${imageQualityWarning ? 'border-warning' : 'border-accent'}`}></div>
+                
+                {/* Crosshairs */}
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-30">
+                  <div className="w-16 h-px bg-white absolute top-1/2 -translate-y-1/2 -left-8"></div>
+                  <div className="w-px h-16 bg-white absolute left-1/2 -translate-x-1/2 -top-8"></div>
+                </div>
               </div>
             </div>
 
@@ -253,8 +348,9 @@ const CameraInterface = ({
           className="hidden"
         />
       </div>
-      {/* Hidden Canvas for Capture */}
+      {/* Hidden Canvas for Capture & Analysis */}
       <canvas ref={canvasRef} className="hidden" />
+      <canvas ref={analysisCanvasRef} className="hidden" />
     </div>
   );
 };
