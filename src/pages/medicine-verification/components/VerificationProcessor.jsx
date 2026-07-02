@@ -338,6 +338,40 @@ const VerificationProcessor = ({
             </div>
           </div>
         </div>
+
+        {/* Comparison View */}
+        <div className="bg-card border border-border rounded-xl p-6 mb-6">
+          <h3 className="font-semibold text-foreground mb-4 flex items-center">
+            <Icon name="Image" size={20} className="mr-2" />
+            Visual Comparison
+          </h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-2 text-center">Your Scan</p>
+              <div className="aspect-video bg-muted rounded-lg overflow-hidden border border-border relative">
+                {imageFile ? (
+                  <img src={URL.createObjectURL(imageFile)} alt="Your scan" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">No image</div>
+                )}
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-2 text-center">Verified Reference</p>
+              <div className="aspect-video bg-muted rounded-lg overflow-hidden border border-border relative">
+                <div className="w-full h-full bg-primary/10 flex items-center justify-center">
+                  <div className="text-center">
+                    <Icon name="ShieldCheck" size={32} className="text-primary/40 mx-auto mb-2" />
+                    <span className="text-sm font-medium text-primary/60">Reference Database</span>
+                  </div>
+                </div>
+                <div className="absolute bottom-2 right-2 bg-success/20 text-success text-[10px] uppercase tracking-wider px-2 py-1 rounded font-bold">
+                  Verified Match
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         {/* Visual Analysis */}
         <div className="bg-card border border-border rounded-xl p-6 mb-6">
           <h3 className="font-semibold text-foreground mb-4 flex items-center">
