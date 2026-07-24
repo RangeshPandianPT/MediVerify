@@ -10,9 +10,10 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 
 from app.schemas.verification import VerificationResult, ErrorResponse
-from app.model.preprocessing import validate_image
+from app.model.preprocessing import validate_image, check_image_quality
 from app.core.auth import get_current_user
 from app.core.rate_limit import limiter
+from app.core.audit import log_audit_event
 
 
 router = APIRouter(tags=["verification"])
@@ -78,6 +79,12 @@ async def verify_medicine(
     # Validate image format
     if not validate_image(image_bytes):
         raise HTTPException(status_code=400, detail="Invalid or corrupted image file")
+        
+    # Check image quality
+    quality_check = check_image_quality(image_bytes)
+    if not quality_check.get("is_valid"):
+        raise HTTPException(status_code=400, detail=quality_check.get("reason", "Image quality is too poor."))
+
     
     # Get verifier and run prediction
     verifier = get_verifier()
@@ -91,6 +98,13 @@ async def verify_medicine(
         result = verifier.predict(image_bytes)
         latency = (time.time() - start_time) * 1000
         logger.info(f"Verification successful for User {user.get('uid')}. Latency: {latency:.2f}ms. Result: {result.get('status') if isinstance(result, dict) else 'success'}")
+        
+        # Log audit event for safety-critical operations
+        if isinstance(result, dict) and not result.get("isAuthentic", True):
+            log_audit_event("COUNTERFEIT_DETECTED", user.get("uid"), {"latency": latency, "status": result.get("status")})
+        else:
+            log_audit_event("VERIFICATION_SUCCESS", user.get("uid"), {"latency": latency})
+            
         return result
     except Exception as e:
         logger.error(f"Verification failed: {str(e)}")
