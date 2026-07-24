@@ -39,3 +39,22 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(
             detail="Invalid authentication credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+def require_roles(allowed_roles: list):
+    """
+    Dependency to enforce Role-Based Access Control (RBAC).
+    Checks if the current user has one of the allowed roles.
+    """
+    def role_checker(user: dict = Depends(get_current_user)):
+        # For Firebase, custom claims like 'role' are present in the decoded token
+        # Default to 'user' if no role is explicitly set
+        user_role = user.get("role", "user")
+        
+        if user_role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Operation not permitted. Required roles: {', '.join(allowed_roles)}",
+            )
+        return user
+    return role_checker
+
