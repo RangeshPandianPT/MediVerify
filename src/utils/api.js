@@ -69,8 +69,52 @@ export async function isServiceReady() {
   }
 }
 
+/**
+ * Check a batch number against active recalls
+ * @param {string} batchNumber
+ * @returns {Promise<Object>}
+ */
+export async function checkBatchRecall(batchNumber) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/reports/check-batch/${encodeURIComponent(batchNumber)}`);
+    if (!response.ok) throw new Error(`Status ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.warn('Backend batch check failed, relying on local registry:', error);
+    return null;
+  }
+}
+
+/**
+ * Submit an emergency counterfeit incident report to backend
+ * @param {Object} reportData
+ * @returns {Promise<Object>}
+ */
+export async function submitIncidentReport(reportData) {
+  const token = await getAuthToken().catch(() => null);
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/reports`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(reportData)
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.detail || `Submission failed with status ${response.status}`);
+  }
+
+  return await response.json();
+}
+
 export default {
   verifyMedicine,
   checkHealth,
   isServiceReady,
+  checkBatchRecall,
+  submitIncidentReport
 };
