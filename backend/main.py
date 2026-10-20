@@ -13,7 +13,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.routes import verify
+from app.routes import verify, reports
 from app.model.predictor import MedicineVerifier
 from app.core.rate_limit import limiter
 
@@ -70,6 +70,7 @@ app.add_middleware(SecureHeadersMiddleware)
 
 # Include routes
 app.include_router(verify.router, prefix="/api")
+app.include_router(reports.router, prefix="/api")
 
 
 @app.get("/api/health")
