@@ -11,6 +11,7 @@ import UserDashboard from './pages/user-dashboard';
 import UserProfile from './pages/user-profile';
 import MedicineVerification from './pages/medicine-verification';
 import MedicineDatabase from './pages/medicine-database';
+import EmergencyReportPage from './pages/emergency-report';
 
 const Routes = () => {
   return (
@@ -27,6 +28,7 @@ const Routes = () => {
         <Route path="/user-profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
         <Route path="/medicine-verification" element={<ProtectedRoute><MedicineVerification /></ProtectedRoute>} />
         <Route path="/medicine-database" element={<ProtectedRoute><MedicineDatabase /></ProtectedRoute>} />
+        <Route path="/emergency-report" element={<ProtectedRoute><EmergencyReportPage /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </RouterRoutes>
       </ErrorBoundary>
