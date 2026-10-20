@@ -72,8 +72,8 @@ const QuickAccessTiles = ({ className = '' }) => {
   ];
 
   const handleTileClick = (path) => {
-    if (path === '/education' || path === '/emergency-report') {
-      // For demo purposes, show alert for unimplemented features
+    if (path === '/education') {
+      // For demo purposes, show alert for educational module
       alert(`${path?.replace('/', '')?.replace('-', ' ')} feature coming soon!`);
       return;
     }

@@ -37,6 +37,12 @@ const Header = ({ user, verificationCount = 0, hasUnreadResults = false, title }
       tooltip: 'Browse comprehensive medicine database'
     },
     { 
+      label: 'Safety & Recalls', 
+      path: '/emergency-report', 
+      icon: 'ShieldAlert',
+      tooltip: 'Check active drug recalls & report counterfeit incidents'
+    },
+    { 
       label: 'History', 
       path: '/verification-history', 
       icon: 'History',
