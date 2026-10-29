@@ -12,12 +12,14 @@ import UserProfile from './pages/user-profile';
 import MedicineVerification from './pages/medicine-verification';
 import MedicineDatabase from './pages/medicine-database';
 import EmergencyReportPage from './pages/emergency-report';
+import EducationPage from './pages/education';
 
 const Routes = () => {
   return (
     <BrowserRouter>
       <ErrorBoundary>
       <ScrollToTop />
+  
       <RouterRoutes>
         {/* Define your route here */}
         <Route path="/" element={<Navigate to="/user-dashboard" replace />} />
@@ -29,6 +31,7 @@ const Routes = () => {
         <Route path="/medicine-verification" element={<ProtectedRoute><MedicineVerification /></ProtectedRoute>} />
         <Route path="/medicine-database" element={<ProtectedRoute><MedicineDatabase /></ProtectedRoute>} />
         <Route path="/emergency-report" element={<ProtectedRoute><EmergencyReportPage /></ProtectedRoute>} />
+        <Route path="/education" element={<ProtectedRoute><EducationPage /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </RouterRoutes>
       </ErrorBoundary>

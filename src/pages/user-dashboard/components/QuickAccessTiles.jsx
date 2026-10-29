@@ -49,7 +49,7 @@ const QuickAccessTiles = ({ className = '' }) => {
       icon: 'BookOpen',
       color: 'accent',
       path: '/education',
-      badge: 'New tips'
+      badge: 'Interactive Guide'
     },
     {
       id: 'emergency',
@@ -72,11 +72,6 @@ const QuickAccessTiles = ({ className = '' }) => {
   ];
 
   const handleTileClick = (path) => {
-    if (path === '/education') {
-      // For demo purposes, show alert for educational module
-      alert(`${path?.replace('/', '')?.replace('-', ' ')} feature coming soon!`);
-      return;
-    }
     navigate(path);
   };
 
