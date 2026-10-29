@@ -20,6 +20,8 @@ This document lists features that can be added to improve MediVerify from protot
 - Regional counterfeit hotspot intelligence & vulnerability index visualization
 - Verified 24/7 emergency poison information & regulatory hotline directory
 - Backend regulatory reporting and batch recall verification API (`/api/reports`)
+- Comprehensive Medicine Safety & Counterfeit Education Guide with interactive visual spot-the-fake challenge (`/education`)
+- Physical packaging integrity red-flag checklist with real-time risk assessment scoring
 
 ## Priority 0 (Critical for Production)
 
